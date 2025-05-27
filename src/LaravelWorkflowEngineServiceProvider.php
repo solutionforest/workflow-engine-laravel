@@ -16,7 +16,7 @@ class LaravelWorkflowEngineServiceProvider extends PackageServiceProvider
          * More info: https://github.com/spatie/laravel-package-tools
          */
         $package
-            ->name('laravel-workflow-engine')
+            ->name('workflow-mastery')
             ->hasConfigFile()
             ->hasViews()
             ->hasMigration('create_laravel_workflow_engine_table')

@@ -1,12 +1,12 @@
 {
-    "name": "solution-forest/laravel-workflow-engine",
-    "description": "This is my package laravel-workflow-engine",
+    "name": "solution-forest/workflow-mastery",
+    "description": "This is my package workflow-mastery",
     "keywords": [
         "solutionforest",
         "laravel",
-        "laravel-workflow-engine"
+        "workflow-mastery"
     ],
-    "homepage": "https://github.com/solutionforest/laravel-workflow-engine",
+    "homepage": "https://github.com/solutionforest/workflow-mastery",
     "license": "MIT",
     "authors": [
         {

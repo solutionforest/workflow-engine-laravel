@@ -6,7 +6,7 @@ use Illuminate\Console\Command;
 
 class LaravelWorkflowEngineCommand extends Command
 {
-    public $signature = 'laravel-workflow-engine';
+    public $signature = 'workflow-mastery';
 
     public $description = 'My command';
 
