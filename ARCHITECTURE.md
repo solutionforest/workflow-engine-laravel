@@ -130,7 +130,7 @@ graph LR
 ### 3.1 Workflow Engine Core
 
 ```php
-namespace SolutionForest\WorkflowEngine\Core;
+namespace Solutionforest\LaravelWorkflowEngine\Core;
 
 class WorkflowEngine
 {
@@ -236,7 +236,7 @@ stateDiagram-v2
 ### 4.1 Action Implementation Pattern
 
 ```php
-namespace SolutionForest\WorkflowEngine\Actions;
+namespace Solutionforest\LaravelWorkflowEngine\Actions;
 
 abstract class BaseAction implements WorkflowAction
 {
@@ -367,7 +367,7 @@ class SagaCoordinator
 ### 5.1 Laravel Integration
 
 ```php
-namespace SolutionForest\WorkflowEngine\Laravel;
+namespace Solutionforest\LaravelWorkflowEngine\Laravel;
 
 class WorkflowServiceProvider extends ServiceProvider
 {
@@ -402,7 +402,7 @@ class WorkflowServiceProvider extends ServiceProvider
 ### 5.2 Symfony Integration
 
 ```php
-namespace SolutionForest\WorkflowEngine\Symfony;
+namespace Solutionforest\LaravelWorkflowEngine\Symfony;
 
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\HttpKernel\Bundle\Bundle;
@@ -429,8 +429,8 @@ class WorkflowEngineBundle extends Bundle
 // bootstrap.php
 require_once 'vendor/autoload.php';
 
-use SolutionForest\WorkflowEngine\Core\WorkflowEngine;
-use SolutionForest\WorkflowEngine\Storage\FileStorage;
+use Solutionforest\LaravelWorkflowEngine\Core\WorkflowEngine;
+use Solutionforest\LaravelWorkflowEngine\Storage\FileStorage;
 
 // Initialize workflow engine
 $storage = new FileStorage(__DIR__ . '/workflows');

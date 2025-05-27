@@ -1,16 +1,21 @@
 {
     "name": "solution-forest/workflow-mastery",
-    "description": "This is my package workflow-mastery",
+    "description": "A powerful, framework-agnostic workflow engine for PHP with Laravel integration - enabling complex business process automation with state management, parallel execution, and extensible action system.",
     "keywords": [
         "solutionforest",
         "laravel",
-        "workflow-mastery"
+        "workflow-mastery",
+        "workflow-engine",
+        "business-process",
+        "automation",
+        "orchestration",
+        "state-machine"
     ],
-    "homepage": "https://github.com/solutionforest/workflow-mastery",
+    "homepage": "https://github.com/solution-forest/workflow-mastery",
     "license": "MIT",
     "authors": [
         {
-            "name": "alan",
+            "name": "Solution Forest",
             "email": "info+package@solutionforest.net",
             "role": "Developer"
         }
@@ -18,7 +23,10 @@
     "require": {
         "php": "^8.3",
         "spatie/laravel-package-tools": "^1.16",
-        "illuminate/contracts": "^10.0||^11.0||^12.0"
+        "illuminate/contracts": "^10.0||^11.0||^12.0",
+        "illuminate/support": "^10.0||^11.0||^12.0",
+        "illuminate/database": "^10.0||^11.0||^12.0",
+        "illuminate/events": "^10.0||^11.0||^12.0"
     },
     "require-dev": {
         "laravel/pint": "^1.14",
@@ -35,13 +43,16 @@
     },
     "autoload": {
         "psr-4": {
-            "Solutionforest\\LaravelWorkflowEngine\\": "src/",
-            "Solutionforest\\LaravelWorkflowEngine\\Database\\Factories\\": "database/factories/"
-        }
+            "SolutionForest\\WorkflowMastery\\": "src/",
+            "SolutionForest\\WorkflowMastery\\Database\\Factories\\": "database/factories/"
+        },
+        "files": [
+            "src/helpers.php"
+        ]
     },
     "autoload-dev": {
         "psr-4": {
-            "Solutionforest\\LaravelWorkflowEngine\\Tests\\": "tests/",
+            "SolutionForest\\WorkflowMastery\\Tests\\": "tests/",
             "Workbench\\App\\": "workbench/app/"
         }
     },
@@ -63,10 +74,10 @@
     "extra": {
         "laravel": {
             "providers": [
-                "Solutionforest\\LaravelWorkflowEngine\\LaravelWorkflowEngineServiceProvider"
+                "SolutionForest\\WorkflowMastery\\LaravelWorkflowEngineServiceProvider"
             ],
             "aliases": {
-                "LaravelWorkflowEngine": "Solutionforest\\LaravelWorkflowEngine\\Facades\\LaravelWorkflowEngine"
+                "WorkflowMastery": "SolutionForest\\WorkflowMastery\\Facades\\WorkflowMastery"
             }
         }
     },

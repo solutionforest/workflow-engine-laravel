@@ -1,6 +1,6 @@
 <?php
 
-namespace Solutionforest\LaravelWorkflowEngine\Commands;
+namespace SolutionForest\WorkflowMastery\Commands;
 
 use Illuminate\Console\Command;
 

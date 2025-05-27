@@ -1,6 +1,6 @@
 <?php
 
-// config for Solutionforest/LaravelWorkflowEngine
+// config for Solution Forest Workflow Mastery
 return [
     /*
     |--------------------------------------------------------------------------
@@ -13,15 +13,15 @@ return [
     |
     */
     'storage' => [
-        'driver' => env('WORKFLOW_STORAGE_DRIVER', 'database'),
-        
+        'driver' => env('WORKFLOW_MASTERY_STORAGE_DRIVER', 'database'),
+
         'database' => [
-            'connection' => env('WORKFLOW_DB_CONNECTION', config('database.default')),
-            'table' => env('WORKFLOW_DB_TABLE', 'workflow_instances'),
+            'connection' => env('WORKFLOW_MASTERY_DB_CONNECTION', config('database.default')),
+            'table' => env('WORKFLOW_MASTERY_DB_TABLE', 'workflow_instances'),
         ],
-        
+
         'file' => [
-            'path' => env('WORKFLOW_FILE_PATH', storage_path('app/workflows')),
+            'path' => env('WORKFLOW_MASTERY_FILE_PATH', storage_path('app/workflows')),
         ],
     ],
 
@@ -34,7 +34,7 @@ return [
     |
     */
     'events' => [
-        'enabled' => env('WORKFLOW_EVENTS_ENABLED', true),
+        'enabled' => env('WORKFLOW_MASTERY_EVENTS_ENABLED', true),
     ],
 
     /*
@@ -46,9 +46,9 @@ return [
     |
     */
     'actions' => [
-        'timeout' => env('WORKFLOW_ACTION_TIMEOUT', '5m'),
-        'retry_attempts' => env('WORKFLOW_ACTION_RETRY_ATTEMPTS', 3),
-        'retry_delay' => env('WORKFLOW_ACTION_RETRY_DELAY', '30s'),
+        'timeout' => env('WORKFLOW_MASTERY_ACTION_TIMEOUT', '5m'),
+        'retry_attempts' => env('WORKFLOW_MASTERY_ACTION_RETRY_ATTEMPTS', 3),
+        'retry_delay' => env('WORKFLOW_MASTERY_ACTION_RETRY_DELAY', '30s'),
     ],
 
     /*
@@ -60,8 +60,8 @@ return [
     |
     */
     'queue' => [
-        'enabled' => env('WORKFLOW_QUEUE_ENABLED', false),
-        'connection' => env('WORKFLOW_QUEUE_CONNECTION', config('queue.default')),
-        'queue_name' => env('WORKFLOW_QUEUE_NAME', 'workflows'),
+        'enabled' => env('WORKFLOW_MASTERY_QUEUE_ENABLED', false),
+        'connection' => env('WORKFLOW_MASTERY_QUEUE_CONNECTION', config('queue.default')),
+        'queue_name' => env('WORKFLOW_MASTERY_QUEUE_NAME', 'workflows'),
     ],
 ];

@@ -2,6 +2,20 @@
 
 namespace Solutionforest\LaravelWorkflowEngine\Facades;
 
+use Solutionforest\LaravelWorkflowEngine\Core\WorkflowEngine;
+use Illuminate\Support\Facades\Facade;
+
+/**
+ * @see \Solutionforest\LaravelWorkflowEngine\Core\WorkflowEngine
+ */
+class LaravelWorkflowEngine extends Facade
+{
+    protected static function getFacadeAccessor()
+    {
+        return WorkflowEngine::class;
+    }
+} Solutionforest\LaravelWorkflowEngine\Facades;
+
 use Illuminate\Support\Facades\Facade;
 
 /**
