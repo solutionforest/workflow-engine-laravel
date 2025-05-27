@@ -7,8 +7,6 @@ use SolutionForest\WorkflowMastery\Contracts\StorageAdapter;
 use SolutionForest\WorkflowMastery\Core\WorkflowEngine;
 use SolutionForest\WorkflowMastery\Core\WorkflowInstance;
 use SolutionForest\WorkflowMastery\Core\WorkflowState;
-use SolutionForest\WorkflowMastery\Events\WorkflowCancelled;
-use SolutionForest\WorkflowMastery\Events\WorkflowStarted;
 use SolutionForest\WorkflowMastery\Tests\TestCase;
 
 class WorkflowEngineTest extends TestCase
@@ -69,7 +67,7 @@ class WorkflowEngineTest extends TestCase
 
         $instance = $this->engine->getWorkflow($workflowId);
         $workflowData = $instance->getContext()->getData();
-        
+
         // Should contain original context plus any data added by actions
         $this->assertEquals('John', $workflowData['name']);
         $this->assertArrayHasKey('logged_message', $workflowData); // Added by LogAction

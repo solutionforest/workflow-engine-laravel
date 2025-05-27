@@ -2,8 +2,6 @@
 
 namespace SolutionForest\WorkflowMastery\Core;
 
-use Illuminate\Support\Facades\Log;
-
 class WorkflowDefinition
 {
     private string $name;
@@ -127,7 +125,7 @@ class WorkflowDefinition
         foreach ($stepsData as $index => $stepData) {
             // Use the 'id' field from step data, or fall back to array index
             $stepId = $stepData['id'] ?? $index;
-            
+
             $actionClass = null;
             if (isset($stepData['action'])) {
                 $actionClass = ActionResolver::resolve($stepData['action']);

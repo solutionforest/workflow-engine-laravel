@@ -3,7 +3,6 @@
 namespace SolutionForest\WorkflowMastery\Core;
 
 use Illuminate\Contracts\Events\Dispatcher as EventDispatcher;
-use Illuminate\Support\Facades\Log;
 use SolutionForest\WorkflowMastery\Contracts\StorageAdapter;
 use SolutionForest\WorkflowMastery\Events\WorkflowCancelled;
 use SolutionForest\WorkflowMastery\Events\WorkflowStarted;

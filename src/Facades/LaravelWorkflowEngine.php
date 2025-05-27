@@ -2,8 +2,8 @@
 
 namespace Solutionforest\LaravelWorkflowEngine\Facades;
 
-use Solutionforest\LaravelWorkflowEngine\Core\WorkflowEngine;
 use Illuminate\Support\Facades\Facade;
+use Solutionforest\LaravelWorkflowEngine\Core\WorkflowEngine;
 
 /**
  * @see \Solutionforest\LaravelWorkflowEngine\Core\WorkflowEngine
