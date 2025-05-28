@@ -36,7 +36,7 @@ Features may be incomplete, APIs are subject to change, and breaking changes may
 ### Requirements
 
 - **PHP**: 8.3 or higher
-- **Laravel**: 10.x, 11.x, or 12.x (for Laravel integration)
+- **Laravel**: 11.x, or 12.x (for Laravel integration)
 - **Extensions**: `json`, `mbstring`
 
 ### Composer Installation
@@ -522,7 +522,7 @@ class RedisStorageAdapter implements StorageAdapter
 ┌─────────────────────────────────────────┐
 │           Laravel Integration           │ ← Framework-specific layer
 ├─────────────────────────────────────────┤
-│         Workflow Engine Core           │ ← Pure PHP, framework-agnostic
+│        Workflow Engine Core             │ ← Pure PHP, framework-agnostic
 │    • WorkflowEngine                     │
 │    • WorkflowDefinition                 │
 │    • WorkflowInstance                   │
