@@ -1,17 +1,17 @@
 <?php
 
-namespace SolutionForest\WorkflowMastery\Facades;
+namespace SolutionForest\WorkflowEngine\Laravel\Facades;
 
 use Illuminate\Support\Facades\Facade;
-use SolutionForest\WorkflowMastery\Core\WorkflowEngine;
+use SolutionForest\WorkflowEngine\Core\WorkflowEngine as CoreWorkflowEngine;
 
 /**
- * @see \Solutionforest\LaravelWorkflowEngine\Core\WorkflowEngine
+ * @see \SolutionForest\WorkflowEngine\Core\WorkflowEngine
  */
-class WorkflowMastery extends Facade
+class WorkflowEngine extends Facade
 {
     protected static function getFacadeAccessor(): string
     {
-        return WorkflowEngine::class;
+        return CoreWorkflowEngine::class;
     }
 }

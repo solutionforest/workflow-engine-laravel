@@ -1,6 +1,6 @@
 <?php
 
-namespace SolutionForest\WorkflowMastery\Events;
+namespace SolutionForest\WorkflowEngine\Laravel\Events;
 
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;

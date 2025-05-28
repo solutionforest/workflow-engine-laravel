@@ -1,10 +1,10 @@
 <?php
 
-namespace SolutionForest\WorkflowMastery\Events;
+namespace SolutionForest\WorkflowEngine\Laravel\Events;
 
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
-use SolutionForest\WorkflowMastery\Core\WorkflowInstance;
+use SolutionForest\WorkflowEngine\Core\WorkflowInstance;
 
 class WorkflowCompletedEvent
 {

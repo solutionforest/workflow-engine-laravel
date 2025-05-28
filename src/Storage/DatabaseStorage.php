@@ -1,12 +1,12 @@
 <?php
 
-namespace SolutionForest\WorkflowMastery\Storage;
+namespace SolutionForest\WorkflowEngine\Laravel\Storage;
 
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
-use SolutionForest\WorkflowMastery\Contracts\StorageAdapter;
-use SolutionForest\WorkflowMastery\Core\WorkflowDefinition;
-use SolutionForest\WorkflowMastery\Core\WorkflowInstance;
+use SolutionForest\WorkflowEngine\Contracts\StorageAdapter;
+use SolutionForest\WorkflowEngine\Core\WorkflowDefinition;
+use SolutionForest\WorkflowEngine\Core\WorkflowInstance;
 
 class DatabaseStorage implements StorageAdapter
 {

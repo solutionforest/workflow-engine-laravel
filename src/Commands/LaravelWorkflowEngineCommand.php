@@ -1,14 +1,14 @@
 <?php
 
-namespace SolutionForest\WorkflowMastery\Commands;
+namespace SolutionForest\WorkflowEngine\Laravel\Commands;
 
 use Illuminate\Console\Command;
 
 class LaravelWorkflowEngineCommand extends Command
 {
-    public $signature = 'workflow-mastery';
+    public $signature = 'workflow-engine';
 
-    public $description = 'My command';
+    public $description = 'Laravel Workflow Engine command';
 
     public function handle(): int
     {
