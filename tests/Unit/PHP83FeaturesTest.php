@@ -1,14 +1,15 @@
 <?php
 
-use SolutionForest\WorkflowMastery\Core\{WorkflowBuilder, WorkflowState};
-use SolutionForest\WorkflowMastery\Support\SimpleWorkflow;
-use SolutionForest\WorkflowMastery\Actions\{LogAction, DelayAction};
+use SolutionForest\WorkflowMastery\Actions\DelayAction;
+use SolutionForest\WorkflowMastery\Actions\LogAction;
+use SolutionForest\WorkflowMastery\Core\WorkflowBuilder;
+use SolutionForest\WorkflowMastery\Core\WorkflowState;
 
 describe('PHP 8.3+ Features', function () {
-    
+
     it('can use enhanced workflow state enum methods', function () {
         $state = WorkflowState::RUNNING;
-        
+
         expect($state->color())->toBe('blue');
         expect($state->icon())->toBe('▶️');
         expect($state->label())->toBe('Running');
@@ -40,7 +41,7 @@ describe('PHP 8.3+ Features', function () {
     it('can use conditional workflow building', function () {
         $workflow = WorkflowBuilder::create('conditional-test')
             ->startWith(LogAction::class, ['message' => 'Start'])
-            ->when('user.premium', function($builder) {
+            ->when('user.premium', function ($builder) {
                 $builder->then(LogAction::class, ['message' => 'Premium user step']);
             })
             ->then(LogAction::class, ['message' => 'Final step'])
@@ -52,7 +53,7 @@ describe('PHP 8.3+ Features', function () {
     it('can create quick template workflows', function () {
         $builder = WorkflowBuilder::quick()->userOnboarding();
         $workflow = $builder->build();
-        
+
         expect($workflow->getName())->toBe('user-onboarding');
         expect($workflow->getSteps())->not()->toBeEmpty();
     });
@@ -62,7 +63,7 @@ describe('PHP 8.3+ Features', function () {
         expect(WorkflowState::PENDING->canTransitionTo(WorkflowState::RUNNING))->toBeTrue();
         expect(WorkflowState::RUNNING->canTransitionTo(WorkflowState::COMPLETED))->toBeTrue();
         expect(WorkflowState::RUNNING->canTransitionTo(WorkflowState::FAILED))->toBeTrue();
-        
+
         // Test invalid transitions
         expect(WorkflowState::COMPLETED->canTransitionTo(WorkflowState::RUNNING))->toBeFalse();
         expect(WorkflowState::FAILED->canTransitionTo(WorkflowState::RUNNING))->toBeFalse();
@@ -87,7 +88,7 @@ describe('PHP 8.3+ Features', function () {
 });
 
 describe('Simplified Learning Curve', function () {
-    
+
     it('can create workflow with common patterns using helper methods', function () {
         $workflow = WorkflowBuilder::create('helper-test')
             ->email(
@@ -106,18 +107,18 @@ describe('Simplified Learning Curve', function () {
 
         $steps = array_values($workflow->getSteps()); // Convert to numeric array
         expect($steps)->toHaveCount(4);
-        
+
         // Check email step
         expect($steps[0]->getActionClass())->toBe('SolutionForest\\WorkflowMastery\\Actions\\EmailAction');
         expect($steps[0]->getConfig()['template'])->toBe('welcome');
-        
+
         // Check delay step
         expect($steps[1]->getActionClass())->toBe('SolutionForest\\WorkflowMastery\\Actions\\DelayAction');
-        
+
         // Check HTTP step
         expect($steps[2]->getActionClass())->toBe('SolutionForest\\WorkflowMastery\\Actions\\HttpAction');
         expect($steps[2]->getConfig()['method'])->toBe('POST');
-        
+
         // Check condition step
         expect($steps[3]->getActionClass())->toBe('SolutionForest\\WorkflowMastery\\Actions\\ConditionAction');
         expect($steps[3]->getConfig()['condition'])->toBe('user.verified');
@@ -125,7 +126,7 @@ describe('Simplified Learning Curve', function () {
 
     it('provides quick workflow templates', function () {
         $templates = ['userOnboarding', 'orderProcessing', 'documentApproval'];
-        
+
         foreach ($templates as $template) {
             $workflow = WorkflowBuilder::quick()->$template()->build();
             expect($workflow->getSteps())->not()->toBeEmpty();

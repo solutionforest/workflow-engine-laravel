@@ -5,6 +5,8 @@ use SolutionForest\WorkflowMastery\Contracts\StorageAdapter;
 use SolutionForest\WorkflowMastery\Core\WorkflowEngine;
 use SolutionForest\WorkflowMastery\Core\WorkflowInstance;
 use SolutionForest\WorkflowMastery\Core\WorkflowState;
+use SolutionForest\WorkflowMastery\Exceptions\InvalidWorkflowDefinitionException;
+use SolutionForest\WorkflowMastery\Exceptions\WorkflowInstanceNotFoundException;
 
 beforeEach(function () {
     $this->engine = app(WorkflowEngine::class);
@@ -148,11 +150,11 @@ test('it throws exception for invalid workflow definition', function () {
     ];
 
     $this->engine->start('test-workflow', $invalidDefinition);
-})->throws(InvalidArgumentException::class, 'Workflow definition must have a name');
+})->throws(InvalidWorkflowDefinitionException::class, 'Required field \'name\' is missing from workflow definition');
 
 test('it throws exception for nonexistent workflow', function () {
     $this->engine->getWorkflow('nonexistent');
-})->throws(InvalidArgumentException::class, 'Workflow not found: nonexistent');
+})->throws(WorkflowInstanceNotFoundException::class, 'Workflow instance \'nonexistent\' was not found');
 
 test('it can list workflows', function () {
     $definition = [

@@ -2,6 +2,7 @@
 
 namespace SolutionForest\WorkflowMastery\Core;
 
+use Exception;
 use Illuminate\Contracts\Events\Dispatcher as EventDispatcher;
 use Illuminate\Support\Facades\Log;
 use SolutionForest\WorkflowMastery\Contracts\WorkflowAction;
@@ -9,13 +10,71 @@ use SolutionForest\WorkflowMastery\Events\StepCompletedEvent;
 use SolutionForest\WorkflowMastery\Events\StepFailedEvent;
 use SolutionForest\WorkflowMastery\Events\WorkflowCompletedEvent;
 use SolutionForest\WorkflowMastery\Events\WorkflowFailedEvent;
+use SolutionForest\WorkflowMastery\Exceptions\ActionNotFoundException;
+use SolutionForest\WorkflowMastery\Exceptions\StepExecutionException;
 
+/**
+ * Workflow executor responsible for running workflow steps and managing execution flow.
+ *
+ * The Executor is the core component that handles the actual execution of workflow steps,
+ * manages state transitions, handles errors, and dispatches events during workflow execution.
+ * It ensures proper step sequencing, error handling, and state persistence.
+ *
+ *
+ * @example Basic workflow execution
+ * ```php
+ * $executor = new Executor($stateManager, $eventDispatcher);
+ *
+ * // Execute a workflow instance
+ * $executor->execute($workflowInstance);
+ *
+ * // The executor will:
+ * // 1. Process all pending steps
+ * // 2. Execute actions in sequence
+ * // 3. Handle errors and retries
+ * // 4. Update workflow state
+ * // 5. Dispatch appropriate events
+ * ```
+ * @example Error handling during execution
+ * ```php
+ * try {
+ *     $executor->execute($instance);
+ * } catch (StepExecutionException $e) {
+ *     // Handle step-specific errors
+ *     echo "Step failed: " . $e->getStep()->getId();
+ *     echo "Context: " . json_encode($e->getContext());
+ * } catch (ActionNotFoundException $e) {
+ *     // Handle missing action classes
+ *     echo "Missing action: " . $e->getActionClass();
+ * }
+ * ```
+ */
 class Executor
 {
-    private StateManager $stateManager;
+    /**
+     * State manager for persisting workflow state changes.
+     */
+    private readonly StateManager $stateManager;
 
-    private EventDispatcher $eventDispatcher;
+    /**
+     * Event dispatcher for workflow and step events.
+     */
+    private readonly EventDispatcher $eventDispatcher;
 
+    /**
+     * Create a new workflow executor.
+     *
+     * @param  StateManager  $stateManager  The state manager for workflow persistence
+     * @param  EventDispatcher|null  $eventDispatcher  Optional event dispatcher for workflow events
+     *
+     * @example Basic setup
+     * ```php
+     * $executor = new Executor(
+     *     new StateManager($storageAdapter),
+     *     app(EventDispatcher::class)
+     * );
+     * ```
+     */
     public function __construct(
         StateManager $stateManager,
         ?EventDispatcher $eventDispatcher = null
@@ -24,22 +83,60 @@ class Executor
         $this->eventDispatcher = $eventDispatcher ?? app(EventDispatcher::class);
     }
 
+    /**
+     * Execute a workflow instance by processing all pending steps.
+     *
+     * This method orchestrates the complete workflow execution, handling state transitions,
+     * step execution, error handling, and event dispatching. It processes steps in sequence
+     * and manages the workflow lifecycle from start to completion.
+     *
+     * @param  WorkflowInstance  $instance  The workflow instance to execute
+     *
+     * @throws StepExecutionException If a step fails during execution
+     * @throws ActionNotFoundException If a required action class is not found
+     *
+     * @example Executing a workflow
+     * ```php
+     * $instance = $stateManager->load('workflow-123');
+     * $executor->execute($instance);
+     *
+     * // The instance state will be updated automatically
+     * echo $instance->getState()->value; // 'completed' or 'failed'
+     * ```
+     */
     public function execute(WorkflowInstance $instance): void
     {
         try {
             $this->processWorkflow($instance);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Workflow execution failed', [
                 'workflow_id' => $instance->getId(),
+                'workflow_name' => $instance->getDefinition()->getName(),
+                'current_step' => $instance->getCurrentStepId(),
                 'error' => $e->getMessage(),
+                'exception_type' => get_class($e),
                 'trace' => $e->getTraceAsString(),
             ]);
 
             $this->stateManager->setError($instance, $e->getMessage());
             $this->eventDispatcher->dispatch(new WorkflowFailedEvent($instance, $e));
+
+            // Re-throw the original exception to maintain the error context
+            throw $e;
         }
     }
 
+    /**
+     * Process workflow execution by managing state transitions and step execution.
+     *
+     * This private method handles the core workflow processing logic, including
+     * state management, step scheduling, and completion detection.
+     *
+     * @param  WorkflowInstance  $instance  The workflow instance to process
+     *
+     * @throws StepExecutionException If step execution fails
+     * @throws ActionNotFoundException If required action classes are missing
+     */
     private function processWorkflow(WorkflowInstance $instance): void
     {
         // If workflow is not running, start it
@@ -52,10 +149,17 @@ class Executor
         $nextSteps = $instance->getNextSteps();
 
         if (empty($nextSteps)) {
-            // Workflow completed
+            // Workflow completed successfully
             $instance->setState(WorkflowState::COMPLETED);
             $this->stateManager->save($instance);
             $this->eventDispatcher->dispatch(new WorkflowCompletedEvent($instance));
+
+            Log::info('Workflow completed successfully', [
+                'workflow_id' => $instance->getId(),
+                'workflow_name' => $instance->getDefinition()->getName(),
+                'completed_steps' => count($instance->getCompletedSteps()),
+                'execution_time' => $instance->getCreatedAt()->diffInSeconds($instance->getUpdatedAt()).'s',
+            ]);
 
             return;
         }
@@ -74,12 +178,27 @@ class Executor
         }
     }
 
+    /**
+     * Execute a single workflow step.
+     *
+     * Handles the complete lifecycle of step execution including action execution,
+     * error handling, state updates, and event dispatching. Provides detailed
+     * error context for debugging and monitoring.
+     *
+     * @param  WorkflowInstance  $instance  The workflow instance
+     * @param  Step  $step  The step to execute
+     *
+     * @throws StepExecutionException If the step fails to execute
+     * @throws ActionNotFoundException If the action class doesn't exist
+     */
     private function executeStep(WorkflowInstance $instance, Step $step): void
     {
         Log::info('Executing workflow step', [
             'workflow_id' => $instance->getId(),
+            'workflow_name' => $instance->getDefinition()->getName(),
             'step_id' => $step->getId(),
-            'action' => $step->getActionClass(),
+            'action_class' => $step->getActionClass(),
+            'step_config' => $step->getConfig(),
         ]);
 
         $instance->setCurrentStepId($step->getId());
@@ -94,51 +213,99 @@ class Executor
             $this->stateManager->markStepCompleted($instance, $step->getId());
             $this->eventDispatcher->dispatch(new StepCompletedEvent($instance, $step));
 
-            Log::info('Workflow step completed', [
+            Log::info('Workflow step completed successfully', [
                 'workflow_id' => $instance->getId(),
                 'step_id' => $step->getId(),
+                'step_duration' => 'calculated_in_future_version', // TODO: Add timing
             ]);
 
             // Continue execution recursively
             $this->processWorkflow($instance);
 
-        } catch (\Exception $e) {
-            $errorMessage = "Step {$step->getId()} failed: {$e->getMessage()}";
+        } catch (Exception $e) {
+            $context = new WorkflowContext(
+                workflowId: $instance->getId(),
+                stepId: $step->getId(),
+                data: $instance->getData(),
+                config: $step->getConfig(),
+                instance: $instance
+            );
 
-            Log::error('Workflow step failed', [
+            // Create detailed step execution exception
+            $stepException = match (true) {
+                $e instanceof ActionNotFoundException => $e,
+                str_contains($e->getMessage(), 'does not exist') => ActionNotFoundException::classNotFound($step->getActionClass(), $step, $context),
+                str_contains($e->getMessage(), 'must implement') => ActionNotFoundException::invalidInterface($step->getActionClass(), $step, $context),
+                default => StepExecutionException::fromException($e, $step, $context)
+            };
+
+            Log::error('Workflow step execution failed', [
                 'workflow_id' => $instance->getId(),
                 'step_id' => $step->getId(),
-                'error' => $e->getMessage(),
+                'action_class' => $step->getActionClass(),
+                'error_type' => get_class($e),
+                'error_message' => $e->getMessage(),
+                'step_config' => $step->getConfig(),
+                'context_data' => $instance->getData(),
             ]);
 
-            $this->stateManager->markStepFailed($instance, $step->getId(), $errorMessage);
-            $this->eventDispatcher->dispatch(new StepFailedEvent($instance, $step, $e));
+            $this->stateManager->markStepFailed($instance, $step->getId(), $stepException->getMessage());
+            $this->eventDispatcher->dispatch(new StepFailedEvent($instance, $step, $stepException));
 
-            // For now, fail the entire workflow if any step fails
-            // TODO: Implement retry logic and error handling strategies
-            throw $e;
+            // Propagate the enhanced exception
+            throw $stepException;
         }
     }
 
+    /**
+     * Execute the action associated with a workflow step.
+     *
+     * Handles action instantiation, validation, execution, and result processing.
+     * Provides comprehensive error handling for missing classes, interface compliance,
+     * and execution failures.
+     *
+     * @param  WorkflowInstance  $instance  The workflow instance
+     * @param  Step  $step  The step containing the action to execute
+     *
+     * @throws ActionNotFoundException If the action class doesn't exist or implement the interface
+     * @throws StepExecutionException If action execution fails
+     */
     private function executeAction(WorkflowInstance $instance, Step $step): void
     {
         $actionClass = $step->getActionClass();
 
         if (! class_exists($actionClass)) {
-            throw new \InvalidArgumentException("Action class {$actionClass} does not exist");
+            $context = new WorkflowContext(
+                workflowId: $instance->getId(),
+                stepId: $step->getId(),
+                data: $instance->getData(),
+                config: $step->getConfig(),
+                instance: $instance
+            );
+
+            throw ActionNotFoundException::classNotFound($actionClass, $step, $context);
         }
 
         $action = app($actionClass, ['config' => $step->getConfig()]);
 
         if (! $action instanceof WorkflowAction) {
-            throw new \InvalidArgumentException("Action class {$actionClass} must implement WorkflowAction interface");
+            $context = new WorkflowContext(
+                workflowId: $instance->getId(),
+                stepId: $step->getId(),
+                data: $instance->getData(),
+                config: $step->getConfig(),
+                instance: $instance
+            );
+
+            throw ActionNotFoundException::invalidInterface($actionClass, $step, $context);
         }
 
         $context = new WorkflowContext(
             workflowId: $instance->getId(),
             stepId: $step->getId(),
             data: $instance->getData(),
-            config: $step->getConfig()
+            config: $step->getConfig(),
+            instance: $instance
         );
 
         $result = $action->execute($context);
@@ -150,7 +317,11 @@ class Executor
                 $this->stateManager->save($instance);
             }
         } else {
-            throw new \RuntimeException($result->getErrorMessage() ?? 'Action failed');
+            throw StepExecutionException::actionFailed(
+                $result->getErrorMessage() ?? 'Action execution failed without specific error message',
+                $step,
+                $context
+            );
         }
     }
 }

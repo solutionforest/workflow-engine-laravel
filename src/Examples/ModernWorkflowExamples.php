@@ -2,11 +2,15 @@
 
 namespace SolutionForest\WorkflowMastery\Examples;
 
-use SolutionForest\WorkflowMastery\Core\WorkflowBuilder;
-use SolutionForest\WorkflowMastery\Support\SimpleWorkflow;
-use SolutionForest\WorkflowMastery\Attributes\{WorkflowStep, Timeout, Retry, Condition};
-use SolutionForest\WorkflowMastery\Core\{ActionResult, WorkflowContext};
 use SolutionForest\WorkflowMastery\Actions\BaseAction;
+use SolutionForest\WorkflowMastery\Attributes\Condition;
+use SolutionForest\WorkflowMastery\Attributes\Retry;
+use SolutionForest\WorkflowMastery\Attributes\Timeout;
+use SolutionForest\WorkflowMastery\Attributes\WorkflowStep;
+use SolutionForest\WorkflowMastery\Core\ActionResult;
+use SolutionForest\WorkflowMastery\Core\WorkflowBuilder;
+use SolutionForest\WorkflowMastery\Core\WorkflowContext;
+use SolutionForest\WorkflowMastery\Support\SimpleWorkflow;
 
 /**
  * Examples showcasing PHP 8.3+ features and simplified API
@@ -22,7 +26,7 @@ class ModernWorkflowExamples
         $workflow = WorkflowBuilder::create('modern-user-onboarding')
             ->description('Modern user onboarding with PHP 8.3+ features')
             ->version('2.0')
-            
+
             // Email step with template variables
             ->email(
                 template: 'welcome',
@@ -30,10 +34,10 @@ class ModernWorkflowExamples
                 subject: 'Welcome to {{ app.name }}!',
                 data: ['welcome_bonus' => 50]
             )
-            
+
             // Delay with named arguments
             ->delay(minutes: 5)
-            
+
             // HTTP request to external service
             ->http(
                 url: 'https://api.analytics.com/track',
@@ -41,55 +45,52 @@ class ModernWorkflowExamples
                 data: [
                     'event' => 'user_registered',
                     'user_id' => '{{ user.id }}',
-                    'timestamp' => '{{ now() }}'
+                    'timestamp' => '{{ now() }}',
                 ]
             )
-            
+
             // Conditional logic
-            ->when('user.premium', function($builder) {
+            ->when('user.premium', function ($builder) {
                 $builder->email(
                     template: 'premium-welcome',
                     to: '{{ user.email }}',
                     subject: 'Welcome to Premium!'
                 );
             })
-            
+
             ->build();
 
         // Start with named arguments
         $engine = app(\SolutionForest\WorkflowMastery\Core\WorkflowEngine::class);
+
         return $engine->start(
-            workflowId: 'onboarding-' . uniqid(),
+            workflowId: 'onboarding-'.uniqid(),
             definition: $workflow->toArray(),
             context: ['user' => ['id' => 123, 'email' => 'user@example.com', 'premium' => true]]
         );
     }
 
     /**
-     * Example 2: Quick templates for common patterns
+     * Example 2: Quick templates for common patterns - DISABLED (requires implementation)
      */
     public function quickTemplateExample(): string
     {
-        // Super simple API for common workflows
-        return SimpleWorkflow::quick()
-            ->userOnboarding()
-            ->customize(fn($builder) => 
-                $builder->delay(hours: 1) // Add custom delay
-                        ->email(
-                            template: 'follow-up',
-                            to: '{{ user.email }}',
-                            subject: 'How are you finding the app?'
-                        )
-            )
-            ->start(['user' => ['id' => 123, 'email' => 'user@example.com']]);
+        // Note: This example is disabled as quick templates would need additional implementation
+        // For now, use the WorkflowBuilder directly for complex workflows
+        throw new \BadMethodCallException('Quick templates are not yet implemented. Use WorkflowBuilder directly.');
     }
 
     /**
-     * Example 3: Sequential workflow with one line
+     * Example 3: Sequential workflow using SimpleWorkflow instance
      */
     public function sequentialExample(): string
     {
-        return SimpleWorkflow::sequential(
+        // Create SimpleWorkflow instance using Laravel's service container
+        $storage = app(\SolutionForest\WorkflowMastery\Contracts\StorageAdapter::class);
+        $eventDispatcher = app(\Illuminate\Contracts\Events\Dispatcher::class);
+        $simple = new SimpleWorkflow($storage, $eventDispatcher);
+
+        return $simple->sequential(
             name: 'order-fulfillment',
             actions: [
                 ValidateOrderAction::class,
@@ -102,34 +103,31 @@ class ModernWorkflowExamples
     }
 
     /**
-     * Example 4: Conditional workflow
+     * Example 4: Conditional workflow - DISABLED (requires implementation)
      */
     public function conditionalExample(): string
     {
-        return SimpleWorkflow::conditional('payment-processing', [
-            'validate' => ValidatePaymentAction::class,
-            'charge' => ChargeCardAction::class,
-            'if payment.success' => [
-                'confirm' => ConfirmOrderAction::class,
-                'email' => SendReceiptAction::class,
-            ],
-            'else' => [
-                'retry' => RetryPaymentAction::class,
-            ]
-        ], ['payment' => ['amount' => 99.99, 'method' => 'card']]);
+        // Note: Conditional workflows need more sophisticated implementation
+        // For now, use WorkflowBuilder with conditional steps
+        throw new \BadMethodCallException('Conditional workflows are not yet implemented in SimpleWorkflow. Use WorkflowBuilder directly.');
     }
 
     /**
-     * Example 5: Single action execution
+     * Example 5: Single action execution using SimpleWorkflow
      */
     public function singleActionExample(): string
     {
-        return SimpleWorkflow::runAction(
+        // Create SimpleWorkflow instance using Laravel's service container
+        $storage = app(\SolutionForest\WorkflowMastery\Contracts\StorageAdapter::class);
+        $eventDispatcher = app(\Illuminate\Contracts\Events\Dispatcher::class);
+        $simple = new SimpleWorkflow($storage, $eventDispatcher);
+
+        return $simple->runAction(
             actionClass: SendEmailAction::class,
             context: [
                 'to' => 'admin@example.com',
                 'subject' => 'Test Email',
-                'body' => 'This is a test email sent via workflow.'
+                'body' => 'This is a test email sent via workflow.',
             ]
         );
     }
@@ -162,16 +160,16 @@ class ValidateOrderAction extends BaseAction
     protected function doExecute(WorkflowContext $context): ActionResult
     {
         $orderData = $context->getData()['order'] ?? [];
-        
+
         // Validation logic using PHP 8.3+ match expressions
-        $validationResult = match(true) {
+        $validationResult = match (true) {
             empty($orderData) => ['valid' => false, 'error' => 'Order data is missing'],
             ($orderData['amount'] ?? 0) <= 0 => ['valid' => false, 'error' => 'Invalid order amount'],
             empty($orderData['items']) => ['valid' => false, 'error' => 'No items in order'],
             default => ['valid' => true, 'error' => null]
         };
 
-        if (!$validationResult['valid']) {
+        if (! $validationResult['valid']) {
             return ActionResult::failure($validationResult['error']);
         }
 
@@ -185,8 +183,16 @@ class ValidateOrderAction extends BaseAction
 // Additional example actions
 class ChargePaymentAction extends BaseAction
 {
-    public function getName(): string { return 'Charge Payment'; }
-    public function getDescription(): string { return 'Charges the customer payment method'; }
+    public function getName(): string
+    {
+        return 'Charge Payment';
+    }
+
+    public function getDescription(): string
+    {
+        return 'Charges the customer payment method';
+    }
+
     protected function doExecute(WorkflowContext $context): ActionResult
     {
         // Implementation would go here
@@ -196,8 +202,16 @@ class ChargePaymentAction extends BaseAction
 
 class UpdateInventoryAction extends BaseAction
 {
-    public function getName(): string { return 'Update Inventory'; }
-    public function getDescription(): string { return 'Updates inventory levels'; }
+    public function getName(): string
+    {
+        return 'Update Inventory';
+    }
+
+    public function getDescription(): string
+    {
+        return 'Updates inventory levels';
+    }
+
     protected function doExecute(WorkflowContext $context): ActionResult
     {
         return ActionResult::success(['inventory_updated' => true]);
@@ -206,18 +220,34 @@ class UpdateInventoryAction extends BaseAction
 
 class ShipOrderAction extends BaseAction
 {
-    public function getName(): string { return 'Ship Order'; }
-    public function getDescription(): string { return 'Initiates order shipping'; }
+    public function getName(): string
+    {
+        return 'Ship Order';
+    }
+
+    public function getDescription(): string
+    {
+        return 'Initiates order shipping';
+    }
+
     protected function doExecute(WorkflowContext $context): ActionResult
     {
-        return ActionResult::success(['tracking_number' => 'TRK' . rand(100000, 999999)]);
+        return ActionResult::success(['tracking_number' => 'TRK'.rand(100000, 999999)]);
     }
 }
 
 class SendEmailAction extends BaseAction
 {
-    public function getName(): string { return 'Send Email'; }
-    public function getDescription(): string { return 'Sends an email'; }
+    public function getName(): string
+    {
+        return 'Send Email';
+    }
+
+    public function getDescription(): string
+    {
+        return 'Sends an email';
+    }
+
     protected function doExecute(WorkflowContext $context): ActionResult
     {
         return ActionResult::success(['email_sent' => true]);
@@ -227,8 +257,16 @@ class SendEmailAction extends BaseAction
 // Additional example actions for conditional workflow
 class ValidatePaymentAction extends BaseAction
 {
-    public function getName(): string { return 'Validate Payment'; }
-    public function getDescription(): string { return 'Validates payment information'; }
+    public function getName(): string
+    {
+        return 'Validate Payment';
+    }
+
+    public function getDescription(): string
+    {
+        return 'Validates payment information';
+    }
+
     protected function doExecute(WorkflowContext $context): ActionResult
     {
         return ActionResult::success(['payment_valid' => true]);
@@ -237,8 +275,16 @@ class ValidatePaymentAction extends BaseAction
 
 class ChargeCardAction extends BaseAction
 {
-    public function getName(): string { return 'Charge Card'; }
-    public function getDescription(): string { return 'Charges the credit card'; }
+    public function getName(): string
+    {
+        return 'Charge Card';
+    }
+
+    public function getDescription(): string
+    {
+        return 'Charges the credit card';
+    }
+
     protected function doExecute(WorkflowContext $context): ActionResult
     {
         return ActionResult::success(['payment' => ['success' => true]]);
@@ -247,8 +293,16 @@ class ChargeCardAction extends BaseAction
 
 class ConfirmOrderAction extends BaseAction
 {
-    public function getName(): string { return 'Confirm Order'; }
-    public function getDescription(): string { return 'Confirms the order'; }
+    public function getName(): string
+    {
+        return 'Confirm Order';
+    }
+
+    public function getDescription(): string
+    {
+        return 'Confirms the order';
+    }
+
     protected function doExecute(WorkflowContext $context): ActionResult
     {
         return ActionResult::success(['order_confirmed' => true]);
@@ -257,8 +311,16 @@ class ConfirmOrderAction extends BaseAction
 
 class SendReceiptAction extends BaseAction
 {
-    public function getName(): string { return 'Send Receipt'; }
-    public function getDescription(): string { return 'Sends payment receipt'; }
+    public function getName(): string
+    {
+        return 'Send Receipt';
+    }
+
+    public function getDescription(): string
+    {
+        return 'Sends payment receipt';
+    }
+
     protected function doExecute(WorkflowContext $context): ActionResult
     {
         return ActionResult::success(['receipt_sent' => true]);
@@ -267,8 +329,16 @@ class SendReceiptAction extends BaseAction
 
 class RetryPaymentAction extends BaseAction
 {
-    public function getName(): string { return 'Retry Payment'; }
-    public function getDescription(): string { return 'Retries failed payment'; }
+    public function getName(): string
+    {
+        return 'Retry Payment';
+    }
+
+    public function getDescription(): string
+    {
+        return 'Retries failed payment';
+    }
+
     protected function doExecute(WorkflowContext $context): ActionResult
     {
         return ActionResult::success(['payment_retried' => true]);

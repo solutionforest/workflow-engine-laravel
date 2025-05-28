@@ -27,7 +27,7 @@ class LogAction extends BaseAction
         $level = $this->getConfig('level', 'info');
 
         // Replace placeholders in message with workflow data
-        $processedMessage = $this->processMessage($message, $context->getAllData());
+        $processedMessage = $this->processMessage($message, $context->getData());
 
         // Log with appropriate level
         match (strtolower($level)) {

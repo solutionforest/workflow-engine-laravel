@@ -2,7 +2,8 @@
 
 namespace SolutionForest\WorkflowMastery\Actions;
 
-use SolutionForest\WorkflowMastery\Attributes\{WorkflowStep, Condition};
+use SolutionForest\WorkflowMastery\Attributes\Condition;
+use SolutionForest\WorkflowMastery\Attributes\WorkflowStep;
 use SolutionForest\WorkflowMastery\Core\ActionResult;
 use SolutionForest\WorkflowMastery\Core\WorkflowContext;
 
@@ -32,13 +33,13 @@ class ConditionAction extends BaseAction
         $onTrue = $this->getConfig('on_true', null);
         $onFalse = $this->getConfig('on_false', null);
 
-        if (!$condition) {
+        if (! $condition) {
             return ActionResult::failure('Condition is required');
         }
 
         try {
-            $result = $this->evaluateCondition($condition, $context->getAllData());
-            
+            $result = $this->evaluateCondition($condition, $context->getData());
+
             return ActionResult::success([
                 'condition' => $condition,
                 'result' => $result,
@@ -67,7 +68,7 @@ class ConditionAction extends BaseAction
             $leftValue = $this->getValue($left, $data);
             $rightValue = $this->getValue($right, $data);
 
-            return match($operator) {
+            return match ($operator) {
                 '=' => $leftValue == $rightValue,
                 '!=' => $leftValue != $rightValue,
                 '>' => $leftValue > $rightValue,
@@ -106,7 +107,7 @@ class ConditionAction extends BaseAction
         }
 
         // Check for boolean literals
-        return match(strtolower($expression)) {
+        return match (strtolower($expression)) {
             'true', 'yes' => true,
             'false', 'no' => false,
             'null', 'empty' => null,

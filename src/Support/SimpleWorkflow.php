@@ -2,172 +2,205 @@
 
 namespace SolutionForest\WorkflowMastery\Support;
 
-use SolutionForest\WorkflowMastery\Core\{WorkflowBuilder, WorkflowEngine};
-use SolutionForest\WorkflowMastery\Contracts\StorageAdapter;
 use Illuminate\Contracts\Events\Dispatcher;
+use SolutionForest\WorkflowMastery\Contracts\StorageAdapter;
+use SolutionForest\WorkflowMastery\Core\WorkflowBuilder;
+use SolutionForest\WorkflowMastery\Core\WorkflowEngine;
 
 /**
- * Simple workflow helper for quick workflow creation and execution
- * 
+ * Simple workflow helper for quick workflow creation and execution.
+ *
  * This class provides a simplified API for common workflow operations,
- * reducing the learning curve for new users.
+ * reducing the learning curve for new users. It offers fluent methods
+ * for creating and executing workflows without dealing with the underlying
+ * complexity of the workflow engine.
+ *
+ * @example Basic usage
+ * ```php
+ * $simple = new SimpleWorkflow($storage);
+ *
+ * // Create and execute a sequential workflow
+ * $instanceId = $simple->sequential('user-onboarding', [
+ *     SendWelcomeEmailAction::class,
+ *     CreateUserProfileAction::class,
+ *     AssignDefaultRoleAction::class,
+ * ], ['user_id' => 123]);
+ * ```
+ * @example Using static methods
+ * ```php
+ * // Quick single action execution
+ * SimpleWorkflow::runAction(SendEmailAction::class, [
+ *     'to' => 'user@example.com',
+ *     'subject' => 'Welcome!'
+ * ]);
+ * ```
  */
 class SimpleWorkflow
 {
+    /**
+     * The underlying workflow engine for execution.
+     */
     private WorkflowEngine $engine;
 
+    /**
+     * Create a new SimpleWorkflow instance.
+     *
+     * @param  StorageAdapter  $storage  Storage adapter for workflow persistence
+     * @param  Dispatcher|null  $eventDispatcher  Optional event dispatcher for workflow events
+     */
     public function __construct(StorageAdapter $storage, ?Dispatcher $eventDispatcher = null)
     {
         $this->engine = new WorkflowEngine($storage, $eventDispatcher);
     }
 
     /**
-     * Create a simple sequential workflow
-     * 
-     * @example
-     * SimpleWorkflow::sequential('user-onboarding', [
+     * Create and execute a simple sequential workflow.
+     *
+     * Creates a workflow where actions execute one after another
+     * in the order they are provided.
+     *
+     * @param  string  $name  Workflow name/identifier
+     * @param  array<string>  $actions  Array of action class names
+     * @param  array<string, mixed>  $context  Initial workflow context data
+     * @return string The workflow instance ID
+     *
+     * @example Sequential workflow
+     * ```php
+     * $instanceId = $simple->sequential('user-onboarding', [
      *     SendWelcomeEmailAction::class,
      *     CreateUserProfileAction::class,
      *     AssignDefaultRoleAction::class,
-     * ], ['user_id' => 123])
+     * ], ['user_id' => 123]);
+     * ```
      */
-    public static function sequential(string $name, array $actions, array $context = []): string
+    public function sequential(string $name, array $actions, array $context = []): string
     {
         $builder = WorkflowBuilder::create($name);
-        
+
+        // Use the fluent 'then' method for sequential execution
         foreach ($actions as $action) {
             $builder->then($action);
         }
 
         $workflow = $builder->build();
-        $engine = app(WorkflowEngine::class);
-        
-        return $engine->start($name . '-' . uniqid(), $workflow->toArray(), $context);
+
+        return $this->engine->start($name.'_'.uniqid(), $workflow->toArray(), $context);
     }
 
     /**
-     * Create a workflow with conditions
-     * 
-     * @example
-     * SimpleWorkflow::conditional('order-processing', [
-     *     'validate' => ValidateOrderAction::class,
-     *     'charge' => ChargePaymentAction::class,
-     *     'if payment.success' => [
-     *         'fulfill' => FulfillOrderAction::class,
-     *         'email' => SendConfirmationEmailAction::class,
-     *     ],
-     *     'else' => [
-     *         'cancel' => CancelOrderAction::class,
-     *     ]
-     * ])
-     */
-    public static function conditional(string $name, array $definition, array $context = []): string
-    {
-        $builder = WorkflowBuilder::create($name);
-        
-        foreach ($definition as $key => $value) {
-            if (str_starts_with($key, 'if ')) {
-                $condition = substr($key, 3);
-                $builder->when($condition, function($b) use ($value) {
-                    foreach ($value as $action) {
-                        $b->then($action);
-                    }
-                });
-            } elseif ($key === 'else') {
-                // Handle else case - would need more sophisticated logic
-                foreach ($value as $action) {
-                    $builder->then($action);
-                }
-            } else {
-                $builder->then($value);
-            }
-        }
-
-        $workflow = $builder->build();
-        $engine = app(WorkflowEngine::class);
-        
-        return $engine->start($name . '-' . uniqid(), $workflow->toArray(), $context);
-    }
-
-    /**
-     * Create workflow from quick templates
-     * 
-     * @example
-     * SimpleWorkflow::quick()->userOnboarding()->start(['user_id' => 123])
-     */
-    public static function quick(): QuickWorkflowStarter
-    {
-        return new QuickWorkflowStarter();
-    }
-
-    /**
-     * Run a single action as a workflow
-     * 
-     * @example
-     * SimpleWorkflow::runAction(SendEmailAction::class, [
+     * Run a single action as a complete workflow.
+     *
+     * Convenience method for executing a single action with
+     * the full workflow infrastructure.
+     *
+     * @param  string  $actionClass  The action class to execute
+     * @param  array<string, mixed>  $context  Context data for the action
+     * @return string The workflow instance ID
+     *
+     * @example Single action execution
+     * ```php
+     * $instanceId = $simple->runAction(SendEmailAction::class, [
      *     'to' => 'user@example.com',
-     *     'subject' => 'Welcome!'
-     * ])
+     *     'subject' => 'Welcome to our platform!'
+     * ]);
+     * ```
      */
-    public static function runAction(string $actionClass, array $context = []): string
+    public function runAction(string $actionClass, array $context = []): string
     {
-        return self::sequential(
-            'single-action-' . class_basename($actionClass),
+        return $this->sequential(
+            'single_action_'.class_basename($actionClass),
             [$actionClass],
             $context
         );
     }
-}
 
-/**
- * Quick workflow starter for fluent template usage
- */
-class QuickWorkflowStarter
-{
-    public function userOnboarding(): QuickWorkflowInstance
+    /**
+     * Get the underlying workflow engine instance.
+     *
+     * Provides access to the full WorkflowEngine API when
+     * the simplified methods are insufficient.
+     *
+     * @return WorkflowEngine The workflow engine instance
+     *
+     * @example Advanced usage
+     * ```php
+     * $simple = new SimpleWorkflow($storage);
+     *
+     * // Use the engine directly for advanced operations
+     * $engine = $simple->getEngine();
+     * $instances = $engine->listInstances(['state' => 'running']);
+     * ```
+     */
+    public function getEngine(): WorkflowEngine
     {
-        return new QuickWorkflowInstance(
-            WorkflowBuilder::quick()->userOnboarding()
-        );
+        return $this->engine;
     }
 
-    public function orderProcessing(): QuickWorkflowInstance
+    /**
+     * Create and execute a workflow from a builder.
+     *
+     * Allows using the full WorkflowBuilder API while still
+     * benefiting from the simple execution interface.
+     *
+     * @param  WorkflowBuilder  $builder  Configured workflow builder
+     * @param  array<string, mixed>  $context  Initial workflow context
+     * @return string The workflow instance ID
+     *
+     * @example Custom workflow with builder
+     * ```php
+     * $builder = WorkflowBuilder::create('complex-workflow')
+     *     ->addStep('validate', ValidateAction::class)
+     *     ->addStep('process', ProcessAction::class)
+     *     ->addConditionalStep('notify', NotifyAction::class, 'success === true')
+     *     ->addTransition('validate', 'process')
+     *     ->addTransition('process', 'notify');
+     *
+     * $instanceId = $simple->executeBuilder($builder, $context);
+     * ```
+     */
+    public function executeBuilder(WorkflowBuilder $builder, array $context = []): string
     {
-        return new QuickWorkflowInstance(
-            WorkflowBuilder::quick()->orderProcessing()
-        );
-    }
+        $workflow = $builder->build();
 
-    public function documentApproval(): QuickWorkflowInstance
-    {
-        return new QuickWorkflowInstance(
-            WorkflowBuilder::quick()->documentApproval()
-        );
-    }
-}
-
-/**
- * Quick workflow instance for immediate execution
- */
-class QuickWorkflowInstance
-{
-    public function __construct(private WorkflowBuilder $builder) {}
-
-    public function start(array $context = []): string
-    {
-        $workflow = $this->builder->build();
-        $engine = app(WorkflowEngine::class);
-        
-        return $engine->start(
-            $workflow->getName() . '-' . uniqid(),
+        return $this->engine->start(
+            $workflow->getName().'_'.uniqid(),
             $workflow->toArray(),
             $context
         );
     }
 
-    public function customize(callable $callback): self
+    /**
+     * Resume a paused workflow instance.
+     *
+     * Convenience method for resuming workflow execution.
+     *
+     * @param  string  $instanceId  The workflow instance ID to resume
+     */
+    public function resume(string $instanceId): void
     {
-        $callback($this->builder);
-        return $this;
+        $this->engine->resume($instanceId);
+    }
+
+    /**
+     * Get the status of a workflow instance.
+     *
+     * @param  string  $instanceId  The workflow instance ID
+     * @return array<string, mixed> Workflow instance status information
+     */
+    public function getStatus(string $instanceId): array
+    {
+        $instance = $this->engine->getInstance($instanceId);
+
+        return [
+            'id' => $instance->getId(),
+            'state' => $instance->getState()->value,
+            'current_step' => $instance->getCurrentStepId(),
+            'progress' => $instance->getProgress(),
+            'completed_steps' => $instance->getCompletedSteps(),
+            'failed_steps' => $instance->getFailedSteps(),
+            'error_message' => $instance->getErrorMessage(),
+            'created_at' => $instance->getCreatedAt(),
+            'updated_at' => $instance->getUpdatedAt(),
+        ];
     }
 }

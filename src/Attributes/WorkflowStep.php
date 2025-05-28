@@ -6,7 +6,7 @@ use Attribute;
 
 /**
  * Workflow step configuration attribute
- * 
+ *
  * @example
  * #[WorkflowStep(
  *     id: 'send_email',

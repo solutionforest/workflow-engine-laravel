@@ -6,7 +6,7 @@ use Attribute;
 
 /**
  * Retry configuration attribute
- * 
+ *
  * @example
  * #[Retry(attempts: 3)]
  * #[Retry(attempts: 5, backoff: 'exponential')]

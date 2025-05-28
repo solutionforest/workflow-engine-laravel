@@ -2,10 +2,12 @@
 
 namespace SolutionForest\WorkflowMastery\Actions;
 
-use SolutionForest\WorkflowMastery\Attributes\{WorkflowStep, Retry, Timeout};
+use Illuminate\Support\Facades\Http;
+use SolutionForest\WorkflowMastery\Attributes\Retry;
+use SolutionForest\WorkflowMastery\Attributes\Timeout;
+use SolutionForest\WorkflowMastery\Attributes\WorkflowStep;
 use SolutionForest\WorkflowMastery\Core\ActionResult;
 use SolutionForest\WorkflowMastery\Core\WorkflowContext;
-use Illuminate\Support\Facades\Http;
 
 /**
  * HTTP request action with PHP 8.3+ features
@@ -37,16 +39,16 @@ class HttpAction extends BaseAction
         $headers = $this->getConfig('headers', []);
         $timeout = $this->getConfig('timeout', 30);
 
-        if (!$url) {
+        if (! $url) {
             return ActionResult::failure('URL is required for HTTP action');
         }
 
         // Process template variables in URL and data
-        $url = $this->processTemplate($url, $context->getAllData());
-        $data = $this->processArrayTemplates($data, $context->getAllData());
+        $url = $this->processTemplate($url, $context->getData());
+        $data = $this->processArrayTemplates($data, $context->getData());
 
         try {
-            $response = match($method) {
+            $response = match ($method) {
                 'GET' => Http::timeout($timeout)->withHeaders($headers)->get($url, $data),
                 'POST' => Http::timeout($timeout)->withHeaders($headers)->post($url, $data),
                 'PUT' => Http::timeout($timeout)->withHeaders($headers)->put($url, $data),
@@ -106,6 +108,7 @@ class HttpAction extends BaseAction
                 $result[$key] = $value;
             }
         }
+
         return $result;
     }
 }

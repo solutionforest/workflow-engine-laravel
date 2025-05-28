@@ -6,7 +6,7 @@ use Attribute;
 
 /**
  * Timeout configuration attribute
- * 
+ *
  * @example
  * #[Timeout(seconds: 30)]
  * #[Timeout(minutes: 5)]
