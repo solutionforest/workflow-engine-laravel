@@ -4,25 +4,12 @@ namespace SolutionForest\WorkflowMastery\Core;
 
 class ActionResult
 {
-    private bool $success;
-
-    private ?string $errorMessage;
-
-    private array $data;
-
-    private array $metadata;
-
     public function __construct(
-        bool $success,
-        ?string $errorMessage = null,
-        array $data = [],
-        array $metadata = []
-    ) {
-        $this->success = $success;
-        $this->errorMessage = $errorMessage;
-        $this->data = $data;
-        $this->metadata = $metadata;
-    }
+        private readonly bool $success,
+        private readonly ?string $errorMessage = null,
+        private readonly array $data = [],
+        private readonly array $metadata = []
+    ) {}
 
     public static function success(array $data = [], array $metadata = []): self
     {

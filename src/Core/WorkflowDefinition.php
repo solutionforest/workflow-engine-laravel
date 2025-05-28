@@ -113,6 +113,12 @@ class WorkflowDefinition
     {
         $steps = [];
         foreach ($stepsData as $index => $stepData) {
+            // Handle both Step objects and array data
+            if ($stepData instanceof Step) {
+                $steps[$stepData->getId()] = $stepData;
+                continue;
+            }
+
             // Use the 'id' field from step data, or fall back to array index
             $stepId = $stepData['id'] ?? $index;
 
