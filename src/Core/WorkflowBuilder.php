@@ -46,7 +46,7 @@ use SolutionForest\WorkflowMastery\Exceptions\InvalidWorkflowDefinitionException
  * @see WorkflowDefinition For the resulting workflow definition structure
  * @see QuickWorkflowBuilder For pre-built common workflow patterns
  */
-class WorkflowBuilder
+final class WorkflowBuilder
 {
     /** @var string The unique workflow name/identifier */
     private string $name;
@@ -101,7 +101,7 @@ class WorkflowBuilder
      */
     public static function create(string $name): static
     {
-        return new static($name);
+        return new self($name);
     }
 
     /**

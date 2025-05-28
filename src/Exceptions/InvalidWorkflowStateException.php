@@ -11,7 +11,7 @@ use SolutionForest\WorkflowMastery\Core\WorkflowState;
  * This exception helps developers understand workflow lifecycle rules
  * and provides clear guidance on valid state transitions.
  */
-class InvalidWorkflowStateException extends WorkflowException
+final class InvalidWorkflowStateException extends WorkflowException
 {
     /**
      * Create a new invalid workflow state exception.
@@ -152,7 +152,7 @@ class InvalidWorkflowStateException extends WorkflowException
      */
     public static function cannotResumeCompleted(string $instanceId): static
     {
-        return new static(
+        return new self(
             "Cannot resume workflow '{$instanceId}' because it is already completed",
             WorkflowState::COMPLETED,
             WorkflowState::RUNNING,
@@ -167,7 +167,7 @@ class InvalidWorkflowStateException extends WorkflowException
      */
     public static function cannotCancelFailed(string $instanceId): static
     {
-        return new static(
+        return new self(
             "Cannot cancel workflow '{$instanceId}' because it has already failed",
             WorkflowState::FAILED,
             WorkflowState::CANCELLED,
@@ -182,7 +182,7 @@ class InvalidWorkflowStateException extends WorkflowException
      */
     public static function alreadyRunning(string $instanceId): static
     {
-        return new static(
+        return new self(
             "Cannot start workflow '{$instanceId}' because it is already running",
             WorkflowState::RUNNING,
             WorkflowState::RUNNING,
@@ -204,7 +204,7 @@ class InvalidWorkflowStateException extends WorkflowException
     ): static {
         $message = "Cannot {$operation} workflow '{$instance->getId()}' - invalid state transition";
 
-        return new static(
+        return new self(
             $message,
             $instance->getState(),
             $attemptedState,

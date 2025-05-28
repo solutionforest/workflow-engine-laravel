@@ -46,7 +46,7 @@ use DateTime;
  * @see WorkflowInstance For workflow execution state management
  * @see WorkflowEngine For workflow execution coordination
  */
-readonly class WorkflowContext
+final readonly class WorkflowContext
 {
     /**
      * Create a new immutable workflow context.
@@ -128,7 +128,7 @@ readonly class WorkflowContext
      */
     public function withData(array $newData): static
     {
-        return new static(
+        return new self(
             workflowId: $this->workflowId,
             stepId: $this->stepId,
             data: array_merge($this->data, $newData),
@@ -158,7 +158,7 @@ readonly class WorkflowContext
         $newData = $this->data;
         data_set($newData, $key, $value);
 
-        return new static(
+        return new self(
             workflowId: $this->workflowId,
             stepId: $this->stepId,
             data: $newData,

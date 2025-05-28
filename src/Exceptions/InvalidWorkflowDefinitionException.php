@@ -8,7 +8,7 @@ namespace SolutionForest\WorkflowMastery\Exceptions;
  * This exception indicates issues with the workflow structure,
  * missing required fields, or invalid configuration values.
  */
-class InvalidWorkflowDefinitionException extends WorkflowException
+final class InvalidWorkflowDefinitionException extends WorkflowException
 {
     /**
      * Create a new invalid workflow definition exception.
@@ -86,7 +86,7 @@ class InvalidWorkflowDefinitionException extends WorkflowException
      */
     public static function missingRequiredField(string $fieldName, array $definition): static
     {
-        return new static(
+        return new self(
             "Required field '{$fieldName}' is missing from workflow definition",
             $definition,
             ["Missing required field: {$fieldName}"]
@@ -102,7 +102,7 @@ class InvalidWorkflowDefinitionException extends WorkflowException
      */
     public static function invalidStep(string $stepId, string $reason, array $definition): static
     {
-        return new static(
+        return new self(
             "Step '{$stepId}' has invalid configuration: {$reason}",
             $definition,
             ["Invalid step '{$stepId}': {$reason}"]
@@ -116,10 +116,10 @@ class InvalidWorkflowDefinitionException extends WorkflowException
      */
     public static function invalidStepId(string $stepId): static
     {
-        return new static(
+        return new self(
             message: "Invalid step ID: '{$stepId}'. Step ID cannot be empty.",
-            context: ['provided_step_id' => $stepId],
-            suggestions: [
+            definition: ['provided_step_id' => $stepId],
+            validationErrors: [
                 'Use a descriptive step identifier',
                 'Examples: "send_email", "validate_input", "process_payment"',
                 'Ensure the step ID is not empty or whitespace-only',
@@ -134,10 +134,10 @@ class InvalidWorkflowDefinitionException extends WorkflowException
      */
     public static function invalidRetryAttempts(int $attempts): static
     {
-        return new static(
+        return new self(
             message: "Invalid retry attempts: {$attempts}. Must be between 0 and 10.",
-            context: ['provided_attempts' => $attempts, 'valid_range' => '0-10'],
-            suggestions: [
+            definition: ['provided_attempts' => $attempts, 'valid_range' => '0-10'],
+            validationErrors: [
                 'Use a value between 0 and 10 for retry attempts',
                 'Consider 0 for no retries, 3 for moderate resilience, or 5+ for critical operations',
                 'Too many retries can delay workflow completion significantly',
@@ -152,10 +152,10 @@ class InvalidWorkflowDefinitionException extends WorkflowException
      */
     public static function invalidTimeout(?int $timeout): static
     {
-        return new static(
+        return new self(
             message: "Invalid timeout: {$timeout}. Timeout must be a positive integer or null.",
-            context: ['provided_timeout' => $timeout],
-            suggestions: [
+            definition: ['provided_timeout' => $timeout],
+            validationErrors: [
                 'Use a positive integer for timeout in seconds',
                 'Use null for no timeout limit',
                 'Consider reasonable timeouts: 30s for quick operations, 300s for complex tasks',
@@ -170,10 +170,10 @@ class InvalidWorkflowDefinitionException extends WorkflowException
      */
     public static function duplicateStepId(string $stepId): static
     {
-        return new static(
+        return new self(
             message: "Duplicate step ID: '{$stepId}'. Step IDs must be unique within a workflow.",
-            context: ['duplicate_step_id' => $stepId],
-            suggestions: [
+            definition: ['duplicate_step_id' => $stepId],
+            validationErrors: [
                 'Use unique step identifiers within each workflow',
                 'Consider adding prefixes or suffixes to make IDs unique',
                 'Examples: "send_email_1", "send_email_welcome", "send_email_reminder"',
@@ -201,14 +201,14 @@ class InvalidWorkflowDefinitionException extends WorkflowException
             'Examples: "user-onboarding", "order_processing", "documentApproval"',
         ];
 
-        return new static(
+        return new self(
             message: $message,
-            context: [
+            definition: [
                 'provided_name' => $name,
                 'validation_rule' => '/^[a-zA-Z][a-zA-Z0-9_-]*$/',
                 'reason' => $reason,
             ],
-            suggestions: $suggestions
+            validationErrors: $suggestions
         );
     }
 
@@ -219,10 +219,10 @@ class InvalidWorkflowDefinitionException extends WorkflowException
      */
     public static function invalidCondition(string $condition): static
     {
-        return new static(
+        return new self(
             message: "Invalid condition expression: '{$condition}'. Condition cannot be empty.",
-            context: ['provided_condition' => $condition],
-            suggestions: [
+            definition: ['provided_condition' => $condition],
+            validationErrors: [
                 'Use valid condition expressions with comparison operators',
                 'Examples: "user.premium === true", "order.amount > 1000", "status !== \'cancelled\'"',
                 'Supported operators: ===, !==, ==, !=, >, <, >=, <=',
@@ -240,14 +240,14 @@ class InvalidWorkflowDefinitionException extends WorkflowException
      */
     public static function invalidDelay(?int $seconds, ?int $minutes, ?int $hours): static
     {
-        return new static(
+        return new self(
             message: 'Invalid delay configuration. At least one positive time value must be provided.',
-            context: [
+            definition: [
                 'provided_seconds' => $seconds,
                 'provided_minutes' => $minutes,
                 'provided_hours' => $hours,
             ],
-            suggestions: [
+            validationErrors: [
                 'Provide at least one positive time value',
                 'Examples: delay(seconds: 30), delay(minutes: 5), delay(hours: 1)',
                 'You can combine multiple time units: delay(hours: 1, minutes: 30)',
@@ -263,10 +263,10 @@ class InvalidWorkflowDefinitionException extends WorkflowException
      */
     public static function emptyWorkflow(string $workflowName): static
     {
-        return new static(
+        return new self(
             message: "Workflow '{$workflowName}' cannot be built with no steps defined.",
-            context: ['workflow_name' => $workflowName],
-            suggestions: [
+            definition: ['workflow_name' => $workflowName],
+            validationErrors: [
                 'Add at least one step using addStep(), startWith(), or then() methods',
                 'Example: $builder->addStep("validate", ValidateAction::class)',
                 'Consider using common patterns: email(), delay(), or http()',
@@ -307,10 +307,10 @@ class InvalidWorkflowDefinitionException extends WorkflowException
             $suggestions[] = $context['suggestion'];
         }
 
-        return new static(
+        return new self(
             message: $message,
-            context: array_merge(['action_name' => $actionName], $context),
-            suggestions: $suggestions
+            definition: array_merge(['action_name' => $actionName], $context),
+            validationErrors: $suggestions
         );
     }
 
@@ -322,15 +322,15 @@ class InvalidWorkflowDefinitionException extends WorkflowException
      */
     public static function invalidActionClass(string $className, string $requiredInterface): static
     {
-        return new static(
+        return new self(
             message: "Class '{$className}' does not implement the required '{$requiredInterface}' interface.",
-            context: [
+            definition: [
                 'class_name' => $className,
                 'required_interface' => $requiredInterface,
                 'class_exists' => class_exists($className),
                 'implemented_interfaces' => class_exists($className) ? class_implements($className) : [],
             ],
-            suggestions: [
+            validationErrors: [
                 "Make sure '{$className}' implements the '{$requiredInterface}' interface",
                 'Check that the class has the required methods: execute(), canExecute(), getName(), getDescription()',
                 'Verify the class is properly imported and autoloaded',

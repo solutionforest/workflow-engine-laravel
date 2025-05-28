@@ -11,7 +11,7 @@ use SolutionForest\WorkflowMastery\Core\WorkflowContext;
  * This exception provides detailed guidance for resolving action-related
  * issues including class loading, dependency injection, and interface compliance.
  */
-class ActionNotFoundException extends WorkflowException
+final class ActionNotFoundException extends WorkflowException
 {
     /**
      * Create a new action not found exception.
@@ -153,7 +153,7 @@ class ActionNotFoundException extends WorkflowException
         Step $step,
         WorkflowContext $context
     ): static {
-        return new static($actionClass, $step->getId(), 'action_not_found');
+        return new self($actionClass, $step->getId(), 'action_not_found');
     }
 
     /**
@@ -168,7 +168,7 @@ class ActionNotFoundException extends WorkflowException
         Step $step,
         WorkflowContext $context
     ): static {
-        return new static($actionClass, $step->getId(), 'invalid_action_class');
+        return new self($actionClass, $step->getId(), 'invalid_action_class');
     }
 
     /**
@@ -183,7 +183,7 @@ class ActionNotFoundException extends WorkflowException
         Step $step,
         WorkflowContext $context
     ): static {
-        return new static($actionClass, $step->getId(), 'class_not_found');
+        return new self($actionClass, $step->getId(), 'class_not_found');
     }
 
     /**
@@ -198,6 +198,6 @@ class ActionNotFoundException extends WorkflowException
         Step $step,
         WorkflowContext $context
     ): static {
-        return new static($actionClass, $step->getId(), 'invalid_interface');
+        return new self($actionClass, $step->getId(), 'invalid_interface');
     }
 }

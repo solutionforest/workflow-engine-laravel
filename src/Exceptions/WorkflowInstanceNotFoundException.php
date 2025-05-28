@@ -8,7 +8,7 @@ namespace SolutionForest\WorkflowMastery\Exceptions;
  * This exception provides helpful suggestions for troubleshooting
  * missing workflow instances and storage configuration issues.
  */
-class WorkflowInstanceNotFoundException extends WorkflowException
+final class WorkflowInstanceNotFoundException extends WorkflowException
 {
     /**
      * Create a new workflow instance not found exception.
@@ -125,7 +125,7 @@ class WorkflowInstanceNotFoundException extends WorkflowException
         string $expectedFormat,
         ?string $storageType = null
     ): static {
-        $exception = new static($instanceId, $storageType);
+        $exception = new self($instanceId, $storageType);
         $exception->context['error_type'] = 'malformed_id';
         $exception->context['expected_format'] = $expectedFormat;
 
@@ -144,7 +144,7 @@ class WorkflowInstanceNotFoundException extends WorkflowException
         string $storageType,
         string $connectionError
     ): static {
-        $exception = new static($instanceId, $storageType);
+        $exception = new self($instanceId, $storageType);
         $exception->context['error_type'] = 'storage_connection';
         $exception->context['connection_error'] = $connectionError;
 
@@ -159,7 +159,7 @@ class WorkflowInstanceNotFoundException extends WorkflowException
      */
     public static function notFound(string $instanceId, ?string $storageType = null): static
     {
-        return new static(
+        return new self(
             $instanceId,
             $storageType,
             [] // empty search filters

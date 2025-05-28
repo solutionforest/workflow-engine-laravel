@@ -90,7 +90,7 @@ use Carbon\Carbon;
  * @see WorkflowState For execution state enumeration
  * @see WorkflowContext For step execution context
  */
-class WorkflowInstance
+final class WorkflowInstance
 {
     /** @var WorkflowState Current execution state of the workflow */
     private WorkflowState $state;
@@ -399,7 +399,7 @@ class WorkflowInstance
      */
     public static function fromArray(array $data, WorkflowDefinition $definition): static
     {
-        $instance = new static(
+        $instance = new self(
             id: $data['id'],
             definition: $definition,
             state: WorkflowState::from($data['state']),

@@ -25,7 +25,7 @@ abstract class WorkflowException extends Exception
      */
     public function __construct(
         string $message,
-        protected readonly array $context = [],
+        protected array $context = [],
         int $code = 0,
         ?Throwable $previous = null
     ) {
@@ -116,6 +116,7 @@ abstract class WorkflowException extends Exception
         WorkflowContext $context,
         ?Throwable $previous = null
     ): static {
+        // @phpstan-ignore-next-line new.static
         return new static($message, [
             'workflow_id' => $context->getWorkflowId(),
             'step_id' => $context->getStepId(),
@@ -138,6 +139,7 @@ abstract class WorkflowException extends Exception
         WorkflowInstance $instance,
         ?Throwable $previous = null
     ): static {
+        // @phpstan-ignore-next-line new.static
         return new static($message, [
             'instance_id' => $instance->getId(),
             'workflow_name' => $instance->getDefinition()->getName(),

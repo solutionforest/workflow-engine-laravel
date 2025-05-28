@@ -71,7 +71,7 @@ namespace SolutionForest\WorkflowMastery\Core;
  * @see WorkflowAction For the interface that returns ActionResult
  * @see BaseAction For the base implementation using ActionResult
  */
-class ActionResult
+final class ActionResult
 {
     /**
      * Create a new action result.
@@ -117,7 +117,7 @@ class ActionResult
      */
     public static function success(array $data = [], array $metadata = []): static
     {
-        return new static(true, null, $data, $metadata);
+        return new self(true, null, $data, $metadata);
     }
 
     /**
@@ -149,7 +149,7 @@ class ActionResult
      */
     public static function failure(string $errorMessage, array $metadata = []): static
     {
-        return new static(false, $errorMessage, [], $metadata);
+        return new self(false, $errorMessage, [], $metadata);
     }
 
     /**
@@ -290,7 +290,7 @@ class ActionResult
      */
     public function withMetadata(array $metadata): static
     {
-        return new static(
+        return new self(
             $this->success,
             $this->errorMessage,
             $this->data,

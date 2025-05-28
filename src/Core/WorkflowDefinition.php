@@ -51,7 +51,7 @@ use SolutionForest\WorkflowMastery\Exceptions\InvalidWorkflowDefinitionException
  * @see WorkflowBuilder For fluent workflow construction
  * @see WorkflowEngine For workflow execution
  */
-class WorkflowDefinition
+final class WorkflowDefinition
 {
     /** @var array<string, Step> Indexed steps for fast lookup by ID */
     private readonly array $steps;
@@ -386,7 +386,7 @@ class WorkflowDefinition
      */
     public static function fromArray(array $data): static
     {
-        return new static(
+        return new self(
             name: $data['name'],
             version: $data['version'] ?? '1.0',
             steps: $data['steps'] ?? [],

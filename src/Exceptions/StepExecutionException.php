@@ -12,7 +12,7 @@ use SolutionForest\WorkflowMastery\Core\WorkflowContext;
  * including execution history, retry information, and suggestions
  * for resolving the issue.
  */
-class StepExecutionException extends WorkflowException
+final class StepExecutionException extends WorkflowException
 {
     /**
      * Create a new step execution exception.
@@ -149,7 +149,7 @@ class StepExecutionException extends WorkflowException
         WorkflowContext $context
     ): static {
         $message = "Action class '{$actionClass}' does not exist or could not be loaded";
-        $exception = new static($message, $step, $context);
+        $exception = new self($message, $step, $context);
         $exception->context['error_type'] = 'class_not_found';
         $exception->context['missing_class'] = $actionClass;
 
@@ -169,7 +169,7 @@ class StepExecutionException extends WorkflowException
         WorkflowContext $context
     ): static {
         $message = "Class '{$actionClass}' does not implement the WorkflowAction interface";
-        $exception = new static($message, $step, $context);
+        $exception = new self($message, $step, $context);
         $exception->context['error_type'] = 'invalid_interface';
         $exception->context['required_interface'] = 'WorkflowAction';
 
@@ -189,7 +189,7 @@ class StepExecutionException extends WorkflowException
         WorkflowContext $context
     ): static {
         $message = "Step '{$step->getId()}' timed out after {$timeout} seconds";
-        $exception = new static($message, $step, $context);
+        $exception = new self($message, $step, $context);
         $exception->context['error_type'] = 'timeout';
         $exception->context['timeout_seconds'] = $timeout;
 
@@ -209,7 +209,7 @@ class StepExecutionException extends WorkflowException
         WorkflowContext $context
     ): static {
         $message = "Step '{$step->getId()}' failed: {$exception->getMessage()}";
-        $stepException = new static($message, $step, $context, 0, $exception);
+        $stepException = new self($message, $step, $context, 0, $exception);
 
         $stepException->context['original_exception'] = get_class($exception);
         $stepException->context['original_message'] = $exception->getMessage();
@@ -233,7 +233,7 @@ class StepExecutionException extends WorkflowException
         WorkflowContext $context
     ): static {
         $message = "Action execution failed in step '{$step->getId()}': {$errorMessage}";
-        $exception = new static($message, $step, $context);
+        $exception = new self($message, $step, $context);
 
         $exception->context['error_type'] = 'action_execution_failed';
         $exception->context['action_class'] = $step->getActionClass();
