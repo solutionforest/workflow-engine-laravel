@@ -62,6 +62,7 @@ class WorkflowDefinition
 
         // If no step found without incoming transitions, return first step
         $stepsArray = $this->steps;
+
         return reset($stepsArray) ?: null;
     }
 
