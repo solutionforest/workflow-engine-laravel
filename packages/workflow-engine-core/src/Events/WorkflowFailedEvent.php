@@ -6,7 +6,6 @@ use SolutionForest\WorkflowEngine\Core\WorkflowInstance;
 
 class WorkflowFailedEvent
 {
-
     public WorkflowInstance $instance;
 
     public \Exception $exception;

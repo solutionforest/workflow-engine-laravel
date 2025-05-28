@@ -3,7 +3,6 @@
 namespace SolutionForest\WorkflowEngine\Laravel\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Casts\Attribute;
 use SolutionForest\WorkflowEngine\Core\WorkflowDefinition;
 use SolutionForest\WorkflowEngine\Core\WorkflowInstance as CoreWorkflowInstance;
 use SolutionForest\WorkflowEngine\Core\WorkflowState;

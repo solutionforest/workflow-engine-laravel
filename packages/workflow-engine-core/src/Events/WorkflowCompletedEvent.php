@@ -6,7 +6,6 @@ use SolutionForest\WorkflowEngine\Core\WorkflowInstance;
 
 class WorkflowCompletedEvent
 {
-
     public WorkflowInstance $instance;
 
     public function __construct(WorkflowInstance $instance)

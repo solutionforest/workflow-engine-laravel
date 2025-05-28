@@ -4,9 +4,9 @@ namespace SolutionForest\WorkflowEngine\Laravel\Providers;
 
 use Illuminate\Contracts\Events\Dispatcher as EventDispatcher;
 use Illuminate\Database\DatabaseManager;
-use SolutionForest\WorkflowEngine\Laravel\Commands\LaravelWorkflowEngineCommand;
 use SolutionForest\WorkflowEngine\Contracts\StorageAdapter;
 use SolutionForest\WorkflowEngine\Core\WorkflowEngine;
+use SolutionForest\WorkflowEngine\Laravel\Commands\LaravelWorkflowEngineCommand;
 use SolutionForest\WorkflowEngine\Laravel\Storage\DatabaseStorage;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
