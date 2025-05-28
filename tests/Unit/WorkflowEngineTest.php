@@ -1,241 +1,205 @@
 <?php
 
-namespace SolutionForest\WorkflowMastery\Tests\Unit;
-
 use Illuminate\Support\Facades\Event;
 use SolutionForest\WorkflowMastery\Contracts\StorageAdapter;
 use SolutionForest\WorkflowMastery\Core\WorkflowEngine;
 use SolutionForest\WorkflowMastery\Core\WorkflowInstance;
 use SolutionForest\WorkflowMastery\Core\WorkflowState;
-use SolutionForest\WorkflowMastery\Events\WorkflowCancelled;
-use SolutionForest\WorkflowMastery\Events\WorkflowStarted;
-use SolutionForest\WorkflowMastery\Tests\TestCase;
 
-class WorkflowEngineTest extends TestCase
-{
-    private WorkflowEngine $engine;
+beforeEach(function () {
+    $this->engine = app(WorkflowEngine::class);
+});
 
-    protected function setUp(): void
-    {
-        parent::setUp();
-        $this->engine = app(WorkflowEngine::class);
-    }
-
-    /** @test */
-    public function it_can_start_a_workflow(): void
-    {
-        $definition = [
-            'name' => 'Test Workflow',
-            'steps' => [
-                [
-                    'id' => 'step1',
-                    'name' => 'First Step',
-                    'action' => 'log',
-                    'parameters' => ['message' => 'Hello World'],
-                ],
+test('it can start a workflow', function () {
+    $definition = [
+        'name' => 'Test Workflow',
+        'steps' => [
+            [
+                'id' => 'step1',
+                'name' => 'First Step',
+                'action' => 'log',
+                'parameters' => ['message' => 'Hello World'],
             ],
-        ];
+        ],
+    ];
 
-        $workflowId = $this->engine->start('test-workflow', $definition);
+    $workflowId = $this->engine->start('test-workflow', $definition);
 
-        $this->assertNotEmpty($workflowId);
+    expect($workflowId)->not->toBeEmpty();
 
-        // Verify the workflow instance was created
-        $instance = $this->engine->getWorkflow($workflowId);
-        $this->assertInstanceOf(WorkflowInstance::class, $instance);
-        $this->assertEquals(WorkflowState::COMPLETED, $instance->getState()); // Log action completes immediately
-        $this->assertEquals('Test Workflow', $instance->getName());
-    }
+    // Verify the workflow instance was created
+    $instance = $this->engine->getWorkflow($workflowId);
+    expect($instance)->toBeInstanceOf(WorkflowInstance::class);
+    expect($instance->getState())->toBe(WorkflowState::COMPLETED); // Log action completes immediately
+    expect($instance->getName())->toBe('Test Workflow');
+});
 
-    /** @test */
-    public function it_can_start_a_workflow_with_context(): void
-    {
-        Event::fake();
+test('it can start a workflow with context', function () {
+    Event::fake();
 
-        $definition = [
-            'name' => 'Test Workflow',
-            'steps' => [
-                [
-                    'id' => 'step1',
-                    'name' => 'First Step',
-                    'action' => 'log',
-                    'parameters' => ['message' => 'Hello {{name}}'],
-                ],
+    $definition = [
+        'name' => 'Test Workflow',
+        'steps' => [
+            [
+                'id' => 'step1',
+                'name' => 'First Step',
+                'action' => 'log',
+                'parameters' => ['message' => 'Hello {{name}}'],
             ],
-        ];
+        ],
+    ];
 
-        $context = ['name' => 'John'];
-        $workflowId = $this->engine->start('test-workflow', $definition, $context);
+    $context = ['name' => 'John'];
+    $workflowId = $this->engine->start('test-workflow', $definition, $context);
 
-        $instance = $this->engine->getWorkflow($workflowId);
-        $workflowData = $instance->getContext()->getData();
-        
-        // Should contain original context plus any data added by actions
-        $this->assertEquals('John', $workflowData['name']);
-        $this->assertArrayHasKey('logged_message', $workflowData); // Added by LogAction
-        $this->assertArrayHasKey('logged_at', $workflowData); // Added by LogAction
-    }
+    $instance = $this->engine->getWorkflow($workflowId);
+    $workflowData = $instance->getContext()->getData();
 
-    /** @test */
-    public function it_can_resume_a_paused_workflow(): void
-    {
-        Event::fake();
+    // Should contain original context plus any data added by actions
+    expect($workflowData['name'])->toBe('John');
+    expect($workflowData)->toHaveKey('logged_message'); // Added by LogAction
+    expect($workflowData)->toHaveKey('logged_at'); // Added by LogAction
+});
 
-        // Create a workflow with multiple steps
-        $definition = [
-            'name' => 'Test Workflow',
-            'steps' => [
-                [
-                    'id' => 'step1',
-                    'name' => 'First Step',
-                    'action' => 'log',
-                    'parameters' => ['message' => 'Hello World'],
-                ],
-                [
-                    'id' => 'step2',
-                    'name' => 'Second Step',
-                    'action' => 'log',
-                    'parameters' => ['message' => 'Second step'],
-                ],
+test('it can resume a paused workflow', function () {
+    Event::fake();
+
+    // Create a workflow with multiple steps
+    $definition = [
+        'name' => 'Test Workflow',
+        'steps' => [
+            [
+                'id' => 'step1',
+                'name' => 'First Step',
+                'action' => 'log',
+                'parameters' => ['message' => 'Hello World'],
             ],
-        ];
-
-        $workflowId = $this->engine->start('test-workflow', $definition);
-
-        // Manually pause it
-        $storage = app(StorageAdapter::class);
-        $instance = $storage->load($workflowId);
-        $instance->setState(WorkflowState::PAUSED);
-        $storage->save($instance);
-
-        // Resume it
-        $this->engine->resume($workflowId);
-
-        $instance = $this->engine->getWorkflow($workflowId);
-        // After resume, it should be completed since we have simple log actions
-        $this->assertEquals(WorkflowState::COMPLETED, $instance->getState());
-    }
-
-    /** @test */
-    public function it_can_cancel_a_workflow(): void
-    {
-        $definition = [
-            'name' => 'Test Workflow',
-            'steps' => [
-                [
-                    'id' => 'step1',
-                    'name' => 'First Step',
-                    'action' => 'log',
-                    'parameters' => ['message' => 'Hello World'],
-                ],
+            [
+                'id' => 'step2',
+                'name' => 'Second Step',
+                'action' => 'log',
+                'parameters' => ['message' => 'Second step'],
             ],
-        ];
+        ],
+    ];
 
-        $workflowId = $this->engine->start('test-workflow', $definition);
-        $this->engine->cancel($workflowId, 'User cancelled');
+    $workflowId = $this->engine->start('test-workflow', $definition);
 
-        $instance = $this->engine->getWorkflow($workflowId);
-        $this->assertEquals(WorkflowState::CANCELLED, $instance->getState());
-    }
+    // Manually pause it
+    $storage = app(StorageAdapter::class);
+    $instance = $storage->load($workflowId);
+    $instance->setState(WorkflowState::PAUSED);
+    $storage->save($instance);
 
-    /** @test */
-    public function it_can_get_workflow_status(): void
-    {
-        $definition = [
-            'name' => 'Test Workflow',
-            'steps' => [
-                [
-                    'id' => 'step1',
-                    'name' => 'First Step',
-                    'action' => 'log',
-                    'parameters' => ['message' => 'Hello World'],
-                ],
+    // Resume it
+    $this->engine->resume($workflowId);
+
+    $instance = $this->engine->getWorkflow($workflowId);
+    // After resume, it should be completed since we have simple log actions
+    expect($instance->getState())->toBe(WorkflowState::COMPLETED);
+});
+
+test('it can cancel a workflow', function () {
+    $definition = [
+        'name' => 'Test Workflow',
+        'steps' => [
+            [
+                'id' => 'step1',
+                'name' => 'First Step',
+                'action' => 'log',
+                'parameters' => ['message' => 'Hello World'],
             ],
-        ];
+        ],
+    ];
 
-        $workflowId = $this->engine->start('test-workflow', $definition);
-        $status = $this->engine->getStatus($workflowId);
+    $workflowId = $this->engine->start('test-workflow', $definition);
+    $this->engine->cancel($workflowId, 'User cancelled');
 
-        $this->assertIsArray($status);
-        $this->assertEquals(WorkflowState::COMPLETED->value, $status['state']);
-        $this->assertEquals('Test Workflow', $status['name']);
-        $this->assertArrayHasKey('current_step', $status);
-        $this->assertArrayHasKey('progress', $status);
-    }
+    $instance = $this->engine->getWorkflow($workflowId);
+    expect($instance->getState())->toBe(WorkflowState::CANCELLED);
+});
 
-    /** @test */
-    public function it_throws_exception_for_invalid_workflow_definition(): void
-    {
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('Workflow definition must have a name');
-
-        $invalidDefinition = [
-            'steps' => [],
-        ];
-
-        $this->engine->start('test-workflow', $invalidDefinition);
-    }
-
-    /** @test */
-    public function it_throws_exception_for_nonexistent_workflow(): void
-    {
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('Workflow not found: nonexistent');
-
-        $this->engine->getWorkflow('nonexistent');
-    }
-
-    /** @test */
-    public function it_can_list_workflows(): void
-    {
-        $definition = [
-            'name' => 'Test Workflow',
-            'steps' => [
-                [
-                    'id' => 'step1',
-                    'name' => 'First Step',
-                    'action' => 'log',
-                    'parameters' => ['message' => 'Hello World'],
-                ],
+test('it can get workflow status', function () {
+    $definition = [
+        'name' => 'Test Workflow',
+        'steps' => [
+            [
+                'id' => 'step1',
+                'name' => 'First Step',
+                'action' => 'log',
+                'parameters' => ['message' => 'Hello World'],
             ],
-        ];
+        ],
+    ];
 
-        $workflowId1 = $this->engine->start('test-workflow-1', $definition);
-        $workflowId2 = $this->engine->start('test-workflow-2', $definition);
+    $workflowId = $this->engine->start('test-workflow', $definition);
+    $status = $this->engine->getStatus($workflowId);
 
-        $workflows = $this->engine->listWorkflows();
+    expect($status)->toBeArray();
+    expect($status['state'])->toBe(WorkflowState::COMPLETED->value);
+    expect($status['name'])->toBe('Test Workflow');
+    expect($status)->toHaveKey('current_step');
+    expect($status)->toHaveKey('progress');
+});
 
-        $this->assertCount(2, $workflows);
-        $this->assertContains($workflowId1, array_column($workflows, 'workflow_id'));
-        $this->assertContains($workflowId2, array_column($workflows, 'workflow_id'));
-    }
+test('it throws exception for invalid workflow definition', function () {
+    $invalidDefinition = [
+        'steps' => [],
+    ];
 
-    /** @test */
-    public function it_can_filter_workflows_by_state(): void
-    {
-        $definition = [
-            'name' => 'Test Workflow',
-            'steps' => [
-                [
-                    'id' => 'step1',
-                    'name' => 'First Step',
-                    'action' => 'log',
-                    'parameters' => ['message' => 'Hello World'],
-                ],
+    $this->engine->start('test-workflow', $invalidDefinition);
+})->throws(InvalidArgumentException::class, 'Workflow definition must have a name');
+
+test('it throws exception for nonexistent workflow', function () {
+    $this->engine->getWorkflow('nonexistent');
+})->throws(InvalidArgumentException::class, 'Workflow not found: nonexistent');
+
+test('it can list workflows', function () {
+    $definition = [
+        'name' => 'Test Workflow',
+        'steps' => [
+            [
+                'id' => 'step1',
+                'name' => 'First Step',
+                'action' => 'log',
+                'parameters' => ['message' => 'Hello World'],
             ],
-        ];
+        ],
+    ];
 
-        $completedId = $this->engine->start('completed-workflow', $definition);
-        $cancelledId = $this->engine->start('cancelled-workflow', $definition);
+    $workflowId1 = $this->engine->start('test-workflow-1', $definition);
+    $workflowId2 = $this->engine->start('test-workflow-2', $definition);
 
-        $this->engine->cancel($cancelledId);
+    $workflows = $this->engine->listWorkflows();
 
-        $completedWorkflows = $this->engine->listWorkflows(['state' => WorkflowState::COMPLETED]);
-        $cancelledWorkflows = $this->engine->listWorkflows(['state' => WorkflowState::CANCELLED]);
+    expect($workflows)->toHaveCount(2);
+    expect(array_column($workflows, 'workflow_id'))->toContain($workflowId1);
+    expect(array_column($workflows, 'workflow_id'))->toContain($workflowId2);
+});
 
-        $this->assertCount(1, $completedWorkflows);
-        $this->assertCount(1, $cancelledWorkflows);
-        $this->assertEquals($completedId, $completedWorkflows[0]['workflow_id']);
-        $this->assertEquals($cancelledId, $cancelledWorkflows[0]['workflow_id']);
-    }
-}
+test('it can filter workflows by state', function () {
+    $definition = [
+        'name' => 'Test Workflow',
+        'steps' => [
+            [
+                'id' => 'step1',
+                'name' => 'First Step',
+                'action' => 'log',
+                'parameters' => ['message' => 'Hello World'],
+            ],
+        ],
+    ];
+
+    $completedId = $this->engine->start('completed-workflow', $definition);
+    $cancelledId = $this->engine->start('cancelled-workflow', $definition);
+
+    $this->engine->cancel($cancelledId);
+
+    $completedWorkflows = $this->engine->listWorkflows(['state' => WorkflowState::COMPLETED]);
+    $cancelledWorkflows = $this->engine->listWorkflows(['state' => WorkflowState::CANCELLED]);
+
+    expect($completedWorkflows)->toHaveCount(1);
+    expect($cancelledWorkflows)->toHaveCount(1);
+    expect($completedWorkflows[0]['workflow_id'])->toBe($completedId);
+    expect($cancelledWorkflows[0]['workflow_id'])->toBe($cancelledId);
+});

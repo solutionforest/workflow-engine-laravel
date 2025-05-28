@@ -1,30 +1,16 @@
 <?php
 
-namespace Solutionforest\LaravelWorkflowEngine\Facades;
-
-use Solutionforest\LaravelWorkflowEngine\Core\WorkflowEngine;
-use Illuminate\Support\Facades\Facade;
-
-/**
- * @see \Solutionforest\LaravelWorkflowEngine\Core\WorkflowEngine
- */
-class LaravelWorkflowEngine extends Facade
-{
-    protected static function getFacadeAccessor()
-    {
-        return WorkflowEngine::class;
-    }
-} Solutionforest\LaravelWorkflowEngine\Facades;
+namespace SolutionForest\WorkflowMastery\Facades;
 
 use Illuminate\Support\Facades\Facade;
 
 /**
- * @see \Solutionforest\LaravelWorkflowEngine\LaravelWorkflowEngine
+ * @see \SolutionForest\WorkflowMastery\LaravelWorkflowEngine
  */
 class LaravelWorkflowEngine extends Facade
 {
     protected static function getFacadeAccessor(): string
     {
-        return \Solutionforest\LaravelWorkflowEngine\LaravelWorkflowEngine::class;
+        return \SolutionForest\WorkflowMastery\LaravelWorkflowEngine::class;
     }
 }

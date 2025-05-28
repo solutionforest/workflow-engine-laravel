@@ -4,41 +4,16 @@ namespace SolutionForest\WorkflowMastery\Core;
 
 class Step
 {
-    private string $id;
-
-    private ?string $actionClass;
-
-    private array $config;
-
-    private ?string $timeout;
-
-    private int $retryAttempts;
-
-    private ?string $compensationAction;
-
-    private array $conditions;
-
-    private array $prerequisites;
-
     public function __construct(
-        string $id,
-        ?string $actionClass = null,
-        array $config = [],
-        ?string $timeout = null,
-        int $retryAttempts = 0,
-        ?string $compensationAction = null,
-        array $conditions = [],
-        array $prerequisites = []
-    ) {
-        $this->id = $id;
-        $this->actionClass = $actionClass;
-        $this->config = $config;
-        $this->timeout = $timeout;
-        $this->retryAttempts = $retryAttempts;
-        $this->compensationAction = $compensationAction;
-        $this->conditions = $conditions;
-        $this->prerequisites = $prerequisites;
-    }
+        private readonly string $id,
+        private readonly ?string $actionClass = null,
+        private readonly array $config = [],
+        private readonly ?string $timeout = null,
+        private readonly int $retryAttempts = 0,
+        private readonly ?string $compensationAction = null,
+        private readonly array $conditions = [],
+        private readonly array $prerequisites = []
+    ) {}
 
     public function getId(): string
     {
@@ -104,7 +79,7 @@ class Step
     private function evaluateCondition(string $condition, array $data): bool
     {
         // Simple condition evaluation - can be enhanced later
-        if (preg_match('/(\w+(?:\.\w+)*)\s*(===|==|!=|>|<|>=|<=)\s*(.+)/', $condition, $matches)) {
+        if (preg_match('/(\w+(?:\.\w+)*)\s*(===|==|!=|>=|<=|>|<)\s*(.+)/', $condition, $matches)) {
             $key = $matches[1];
             $operator = $matches[2];
             $value = trim($matches[3], '"\'');

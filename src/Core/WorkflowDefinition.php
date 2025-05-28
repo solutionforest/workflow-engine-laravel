@@ -2,32 +2,18 @@
 
 namespace SolutionForest\WorkflowMastery\Core;
 
-use Illuminate\Support\Facades\Log;
-
 class WorkflowDefinition
 {
-    private string $name;
-
-    private string $version;
-
-    private array $steps;
-
-    private array $transitions;
-
-    private array $metadata;
+    private readonly array $steps;
 
     public function __construct(
-        string $name,
-        string $version,
+        private readonly string $name,
+        private readonly string $version,
         array $steps = [],
-        array $transitions = [],
-        array $metadata = []
+        private readonly array $transitions = [],
+        private readonly array $metadata = []
     ) {
-        $this->name = $name;
-        $this->version = $version;
         $this->steps = $this->processSteps($steps);
-        $this->transitions = $transitions;
-        $this->metadata = $metadata;
     }
 
     public function getName(): string
@@ -75,7 +61,8 @@ class WorkflowDefinition
         }
 
         // If no step found without incoming transitions, return first step
-        return reset($this->steps) ?: null;
+        $stepsArray = $this->steps;
+        return reset($stepsArray) ?: null;
     }
 
     public function getNextSteps(?string $currentStepId, array $data = []): array
@@ -127,7 +114,7 @@ class WorkflowDefinition
         foreach ($stepsData as $index => $stepData) {
             // Use the 'id' field from step data, or fall back to array index
             $stepId = $stepData['id'] ?? $index;
-            
+
             $actionClass = null;
             if (isset($stepData['action'])) {
                 $actionClass = ActionResolver::resolve($stepData['action']);
@@ -161,7 +148,7 @@ class WorkflowDefinition
 
             return match ($operator) {
                 '===' => $dataValue === $value,
-                '!==', '!==' => $dataValue !== $value,
+                '!==' => $dataValue !== $value,
                 '==' => $dataValue == $value,
                 '!=' => $dataValue != $value,
                 '>' => $dataValue > $value,

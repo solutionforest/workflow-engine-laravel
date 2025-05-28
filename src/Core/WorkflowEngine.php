@@ -3,32 +3,30 @@
 namespace SolutionForest\WorkflowMastery\Core;
 
 use Illuminate\Contracts\Events\Dispatcher as EventDispatcher;
-use Illuminate\Support\Facades\Log;
 use SolutionForest\WorkflowMastery\Contracts\StorageAdapter;
 use SolutionForest\WorkflowMastery\Events\WorkflowCancelled;
 use SolutionForest\WorkflowMastery\Events\WorkflowStarted;
 
 class WorkflowEngine
 {
-    private DefinitionParser $parser;
+    private readonly DefinitionParser $parser;
 
-    private StateManager $stateManager;
+    private readonly StateManager $stateManager;
 
-    private Executor $executor;
-
-    private EventDispatcher $eventDispatcher;
-
-    private StorageAdapter $storage;
+    private readonly Executor $executor;
 
     public function __construct(
-        StorageAdapter $storage,
-        ?EventDispatcher $eventDispatcher = null
+        private readonly StorageAdapter $storage,
+        private readonly ?EventDispatcher $eventDispatcher = null
     ) {
-        $this->storage = $storage;
         $this->parser = new DefinitionParser;
         $this->stateManager = new StateManager($storage);
         $this->executor = new Executor($this->stateManager);
-        $this->eventDispatcher = $eventDispatcher ?? app(EventDispatcher::class);
+
+        // If no event dispatcher is provided, we'll use a fallback approach
+        if ($this->eventDispatcher === null) {
+            // We'll handle this case in the methods that use the event dispatcher
+        }
     }
 
     /**
@@ -53,7 +51,7 @@ class WorkflowEngine
         $this->stateManager->save($instance);
 
         // Dispatch start event
-        $this->eventDispatcher->dispatch(new WorkflowStarted(
+        $this->dispatchEvent(new WorkflowStarted(
             $instance->getId(),
             $instance->getDefinition()->getName(),
             $context
@@ -107,7 +105,7 @@ class WorkflowEngine
         $this->stateManager->save($instance);
 
         // Dispatch cancel event
-        $this->eventDispatcher->dispatch(new WorkflowCancelled(
+        $this->dispatchEvent(new WorkflowCancelled(
             $instance->getId(),
             $instance->getDefinition()->getName(),
             $reason
@@ -121,12 +119,7 @@ class WorkflowEngine
      */
     public function getWorkflow(string $workflowId): WorkflowInstance
     {
-        $instance = $this->stateManager->load($workflowId);
-        if (! $instance) {
-            throw new \InvalidArgumentException("Workflow not found: {$workflowId}");
-        }
-
-        return $instance;
+        return $this->stateManager->load($workflowId);
     }
 
     /**
@@ -170,5 +163,15 @@ class WorkflowEngine
                 'updated_at' => $instance->getUpdatedAt(),
             ];
         }, $instances);
+    }
+
+    /**
+     * Safely dispatch an event if event dispatcher is available
+     */
+    private function dispatchEvent(object $event): void
+    {
+        if ($this->eventDispatcher !== null) {
+            $this->eventDispatcher->dispatch($event);
+        }
     }
 }

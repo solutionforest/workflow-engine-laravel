@@ -14,12 +14,12 @@ return [
     */
     'storage' => [
         'driver' => env('WORKFLOW_STORAGE_DRIVER', 'database'),
-        
+
         'database' => [
             'connection' => env('WORKFLOW_DB_CONNECTION', config('database.default')),
             'table' => env('WORKFLOW_DB_TABLE', 'workflow_instances'),
         ],
-        
+
         'file' => [
             'path' => env('WORKFLOW_FILE_PATH', storage_path('app/workflows')),
         ],

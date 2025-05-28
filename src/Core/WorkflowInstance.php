@@ -6,10 +6,6 @@ use Carbon\Carbon;
 
 class WorkflowInstance
 {
-    private string $id;
-
-    private WorkflowDefinition $definition;
-
     private WorkflowState $state;
 
     private array $data;
@@ -22,20 +18,18 @@ class WorkflowInstance
 
     private ?string $errorMessage = null;
 
-    private Carbon $createdAt;
+    private readonly Carbon $createdAt;
 
     private Carbon $updatedAt;
 
     public function __construct(
-        string $id,
-        WorkflowDefinition $definition,
+        private readonly string $id,
+        private readonly WorkflowDefinition $definition,
         WorkflowState $state,
         array $data = [],
         ?Carbon $createdAt = null,
         ?Carbon $updatedAt = null
     ) {
-        $this->id = $id;
-        $this->definition = $definition;
         $this->state = $state;
         $this->data = $data;
         $this->createdAt = $createdAt ?? now();

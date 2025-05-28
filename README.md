@@ -6,6 +6,14 @@
 [![GitHub Code Style Action Status](https://img.shields.io/github/actions/workflow/status/solution-forest/workflow-mastery/fix-php-code-style-issues.yml?branch=main&label=code%20style&style=flat-square)](https://github.com/solution-forest/workflow-mastery/actions?query=workflow%3A"Fix+PHP+code+style+issues"+branch%3Amain)
 [![Total Downloads](https://img.shields.io/packagist/dt/solution-forest/workflow-mastery.svg?style=flat-square)](https://packagist.org/packages/solution-forest/workflow-mastery)
 
+## ⚠️ WARNING: DEVELOPMENT STATUS
+
+**This package is currently under active development and is NOT READY FOR PRODUCTION USE.**
+
+Features may be incomplete, APIs might change, and there could be breaking changes. Use at your own risk in development environments only.
+
+---
+
 Inspired by the best ideas from many languages and platforms, **Workflow Mastery** aims to be a universal, modular, and extensible workflow engine. While it integrates seamlessly with Laravel, its core logic is designed to be framework-agnostic, so you can use it anywhere.
 
 ---
@@ -274,6 +282,309 @@ $result = $engine->execute($workflowDefinition, $initialData);
 
 ---
 
+## 🚀 Quick Start for Laravel Developers
+
+### 1. Create Your First Action
+
+Actions are the building blocks of workflows. Create a simple action:
+
+```php
+<?php
+
+namespace App\Actions;
+
+use SolutionForest\WorkflowMastery\Contracts\WorkflowAction;
+use SolutionForest\WorkflowMastery\Core\ActionResult;
+use SolutionForest\WorkflowMastery\Core\WorkflowContext;
+use Illuminate\Support\Facades\Mail;
+
+class SendWelcomeEmailAction implements WorkflowAction
+{
+    public function execute(WorkflowContext $context): ActionResult
+    {
+        $data = $context->getData();
+        
+        // Send welcome email
+        Mail::to($data['email'])->send(new WelcomeEmail($data['user']));
+        
+        return ActionResult::success(['email_sent' => true]);
+    }
+
+    public function canExecute(WorkflowContext $context): bool
+    {
+        $data = $context->getData();
+        return !empty($data['email']) && !empty($data['user']);
+    }
+
+    public function getName(): string
+    {
+        return 'Send Welcome Email';
+    }
+
+    public function getDescription(): string
+    {
+        return 'Sends a welcome email to the user';
+    }
+}
+```
+
+### 2. Define a Simple Workflow
+
+Create a workflow configuration array:
+
+```php
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use SolutionForest\WorkflowMastery\Core\WorkflowEngine;
+use App\Actions\SendWelcomeEmailAction;
+use App\Actions\CreateUserProfileAction;
+
+class UserController extends Controller
+{
+    public function __construct(private WorkflowEngine $workflowEngine) {}
+
+    public function register(Request $request)
+    {
+        // Create user first
+        $user = User::create($request->validated());
+
+        // Define workflow
+        $workflow = [
+            'name' => 'User Registration Process',
+            'version' => '1.0',
+            'steps' => [
+                [
+                    'id' => 'send_welcome',
+                    'name' => 'Send Welcome Email',
+                    'action' => SendWelcomeEmailAction::class,
+                ],
+                [
+                    'id' => 'create_profile',
+                    'name' => 'Create User Profile',
+                    'action' => CreateUserProfileAction::class,
+                ],
+            ],
+            'transitions' => [
+                ['from' => 'send_welcome', 'to' => 'create_profile'],
+            ],
+        ];
+
+        // Start workflow
+        $workflowId = $this->workflowEngine->start(
+            "user-registration-{$user->id}",
+            $workflow,
+            [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'user' => $user->toArray(),
+            ]
+        );
+
+        return response()->json([
+            'user' => $user,
+            'workflow_id' => $workflowId,
+            'message' => 'Registration started successfully'
+        ]);
+    }
+}
+```
+
+### 3. Using Helper Functions
+
+Laravel Workflow Engine provides convenient helper functions:
+
+```php
+// Start a workflow
+$workflowId = start_workflow('order-123', $orderWorkflow, $orderData);
+
+// Get workflow status
+$workflow = get_workflow($workflowId);
+$status = $workflow->getState(); // PENDING, RUNNING, COMPLETED, FAILED, CANCELLED
+
+// Resume a paused workflow
+$workflow = resume_workflow($workflowId);
+
+// Cancel a workflow
+$workflow = cancel_workflow($workflowId);
+```
+
+### 4. Working with Queues
+
+For long-running workflows, use Laravel's queue system:
+
+```php
+<?php
+
+namespace App\Actions;
+
+use SolutionForest\WorkflowMastery\Contracts\WorkflowAction;
+use SolutionForest\WorkflowMastery\Core\ActionResult;
+use SolutionForest\WorkflowMastery\Core\WorkflowContext;
+use Illuminate\Support\Facades\Queue;
+
+class ProcessLargeFileAction implements WorkflowAction
+{
+    public function execute(WorkflowContext $context): ActionResult
+    {
+        $data = $context->getData();
+        
+        // Dispatch to queue for heavy processing
+        Queue::push(new ProcessFileJob($data['file_path']));
+        
+        return ActionResult::success([
+            'status' => 'queued',
+            'job_id' => 'process-' . uniqid(),
+        ]);
+    }
+
+    public function canExecute(WorkflowContext $context): bool
+    {
+        return !empty($context->getData()['file_path']);
+    }
+
+    public function getName(): string { return 'Process Large File'; }
+    public function getDescription(): string { return 'Processes large files asynchronously'; }
+}
+```
+
+### 5. Configuration
+
+Configure the workflow engine in `config/workflow-engine.php`:
+
+```php
+<?php
+
+return [
+    'storage' => [
+        'driver' => env('WORKFLOW_STORAGE_DRIVER', 'database'),
+        'connection' => env('WORKFLOW_DB_CONNECTION', 'default'),
+        'table' => 'workflow_instances',
+    ],
+    
+    'events' => [
+        'enabled' => true,
+        'listeners' => [
+            // Add your event listeners here
+        ],
+    ],
+    
+    'timeouts' => [
+        'default' => '1 hour',
+        'max' => '24 hours',
+    ],
+    
+    'retries' => [
+        'default_attempts' => 3,
+        'delay' => '5 minutes',
+    ],
+];
+```
+
+### 6. Monitoring Workflows
+
+Monitor workflow execution in your controllers:
+
+```php
+<?php
+
+namespace App\Http\Controllers;
+
+class WorkflowController extends Controller
+{
+    public function status($workflowId)
+    {
+        $status = workflow()->getStatus($workflowId);
+        
+        return response()->json([
+            'workflow_id' => $status['workflow_id'],
+            'state' => $status['state'],
+            'progress' => $status['progress'] . '%',
+            'current_step' => $status['current_step'],
+            'created_at' => $status['created_at'],
+            'updated_at' => $status['updated_at'],
+        ]);
+    }
+    
+    public function list(Request $request)
+    {
+        $workflows = workflow()->listWorkflows([
+            'state' => $request->get('state'), // PENDING, RUNNING, etc.
+            'limit' => $request->get('limit', 10),
+        ]);
+        
+        return response()->json($workflows);
+    }
+}
+```
+
+### 7. Simple E-commerce Example
+
+Here's a complete example for order processing:
+
+```php
+// app/Actions/ValidateOrderAction.php
+class ValidateOrderAction implements WorkflowAction
+{
+    public function execute(WorkflowContext $context): ActionResult
+    {
+        $order = $context->getData()['order'];
+        
+        // Validate order data
+        if (empty($order['items']) || $order['total'] <= 0) {
+            return ActionResult::failure('Invalid order data');
+        }
+        
+        return ActionResult::success(['validated' => true]);
+    }
+    
+    public function canExecute(WorkflowContext $context): bool
+    {
+        return !empty($context->getData()['order']);
+    }
+    
+    public function getName(): string { return 'Validate Order'; }
+    public function getDescription(): string { return 'Validates order data'; }
+}
+
+// app/Http/Controllers/OrderController.php
+class OrderController extends Controller
+{
+    public function process(Request $request)
+    {
+        $order = Order::create($request->validated());
+        
+        $workflow = [
+            'name' => 'Order Processing',
+            'steps' => [
+                ['id' => 'validate', 'action' => ValidateOrderAction::class],
+                ['id' => 'payment', 'action' => ProcessPaymentAction::class],
+                ['id' => 'fulfill', 'action' => FulfillOrderAction::class],
+            ],
+            'transitions' => [
+                ['from' => 'validate', 'to' => 'payment'],
+                ['from' => 'payment', 'to' => 'fulfill'],
+            ],
+        ];
+        
+        $workflowId = start_workflow("order-{$order->id}", $workflow, [
+            'order' => $order->toArray(),
+            'customer_id' => $order->customer_id,
+        ]);
+        
+        return response()->json([
+            'order_id' => $order->id,
+            'workflow_id' => $workflowId,
+            'status' => 'processing'
+        ]);
+    }
+}
+```
+
+---
+
 ## 🎮 Usage Examples
 
 ### Basic Workflow Execution
@@ -461,7 +772,287 @@ composer analyse
 
 ---
 
-## 📚 Documentation
+## � Best Practices & Tips for Laravel Developers
+
+### Action Development Tips
+
+```php
+// ✅ Good: Keep actions focused and testable
+class SendEmailAction implements WorkflowAction
+{
+    public function __construct(
+        private MailService $mailService,
+        private Logger $logger
+    ) {}
+
+    public function execute(WorkflowContext $context): ActionResult
+    {
+        try {
+            $data = $context->getData();
+            $this->mailService->send($data['template'], $data['recipient']);
+            
+            $this->logger->info('Email sent successfully', ['recipient' => $data['recipient']]);
+            
+            return ActionResult::success(['sent_at' => now()]);
+        } catch (Exception $e) {
+            $this->logger->error('Email failed', ['error' => $e->getMessage()]);
+            return ActionResult::failure($e->getMessage());
+        }
+    }
+}
+
+// ❌ Avoid: Heavy logic in actions - delegate to services
+class BadEmailAction implements WorkflowAction
+{
+    public function execute(WorkflowContext $context): ActionResult
+    {
+        // Don't put all your business logic here
+        // Delegate to services instead
+    }
+}
+```
+
+### Workflow Design Patterns
+
+```php
+// Pattern 1: Sequential Processing
+$sequentialWorkflow = [
+    'steps' => [
+        ['id' => 'step1', 'action' => Action1::class],
+        ['id' => 'step2', 'action' => Action2::class],
+        ['id' => 'step3', 'action' => Action3::class],
+    ],
+    'transitions' => [
+        ['from' => 'step1', 'to' => 'step2'],
+        ['from' => 'step2', 'to' => 'step3'],
+    ],
+];
+
+// Pattern 2: Conditional Branching
+$conditionalWorkflow = [
+    'steps' => [
+        ['id' => 'check_value', 'action' => CheckValueAction::class],
+        ['id' => 'high_value_path', 'action' => HighValueAction::class],
+        ['id' => 'normal_path', 'action' => NormalAction::class],
+    ],
+    'transitions' => [
+        ['from' => 'check_value', 'to' => 'high_value_path', 'condition' => 'value > 1000'],
+        ['from' => 'check_value', 'to' => 'normal_path', 'condition' => 'value <= 1000'],
+    ],
+];
+
+// Pattern 3: Parallel Processing
+$parallelWorkflow = [
+    'steps' => [
+        ['id' => 'start', 'action' => StartAction::class],
+        ['id' => 'task_a', 'action' => TaskAAction::class],
+        ['id' => 'task_b', 'action' => TaskBAction::class],
+        ['id' => 'merge', 'action' => MergeAction::class],
+    ],
+    'transitions' => [
+        ['from' => 'start', 'to' => 'task_a'],
+        ['from' => 'start', 'to' => 'task_b'],
+        ['from' => 'task_a', 'to' => 'merge'],
+        ['from' => 'task_b', 'to' => 'merge'],
+    ],
+];
+```
+
+### Error Handling Strategies
+
+```php
+// Strategy 1: Compensation Actions
+class ProcessPaymentAction implements WorkflowAction
+{
+    public function execute(WorkflowContext $context): ActionResult
+    {
+        $data = $context->getData();
+        
+        try {
+            $payment = PaymentService::charge($data['amount'], $data['card']);
+            return ActionResult::success(['payment_id' => $payment->id]);
+        } catch (PaymentException $e) {
+            // Mark for compensation
+            return ActionResult::failure($e->getMessage(), [
+                'compensation_action' => RefundAction::class,
+                'compensation_data' => ['charge_id' => $payment->id ?? null]
+            ]);
+        }
+    }
+}
+
+// Strategy 2: Retry with Backoff
+class ExternalApiAction implements WorkflowAction
+{
+    public function execute(WorkflowContext $context): ActionResult
+    {
+        try {
+            $response = Http::timeout(30)->get($context->getData()['api_url']);
+            return ActionResult::success($response->json());
+        } catch (RequestException $e) {
+            if ($e->getCode() >= 500) {
+                // Retryable error
+                return ActionResult::retry('Server error, will retry', [
+                    'retry_after' => 60, // seconds
+                    'max_attempts' => 3
+                ]);
+            }
+            
+            return ActionResult::failure('Client error: ' . $e->getMessage());
+        }
+    }
+}
+```
+
+### Testing Workflows
+
+```php
+// tests/Feature/OrderWorkflowTest.php
+class OrderWorkflowTest extends TestCase
+{
+    public function test_successful_order_processing()
+    {
+        // Arrange
+        $order = Order::factory()->create();
+        $workflow = app(WorkflowEngine::class);
+        
+        // Act
+        $workflowId = $workflow->start('order-process', [
+            'name' => 'Order Processing',
+            'steps' => [
+                ['id' => 'validate', 'action' => ValidateOrderAction::class],
+                ['id' => 'payment', 'action' => ProcessPaymentAction::class],
+            ],
+            'transitions' => [
+                ['from' => 'validate', 'to' => 'payment'],
+            ],
+        ], ['order_id' => $order->id]);
+        
+        // Assert
+        $instance = $workflow->getInstance($workflowId);
+        $this->assertEquals('completed', $instance->getState()->value);
+    }
+
+    public function test_payment_failure_triggers_compensation()
+    {
+        // Mock payment failure
+        PaymentService::shouldReceive('charge')
+            ->once()
+            ->andThrow(new PaymentException('Card declined'));
+        
+        // Test compensation logic
+        $workflowId = $this->startOrderWorkflow();
+        $instance = $this->workflowEngine->getInstance($workflowId);
+        
+        $this->assertEquals('failed', $instance->getState()->value);
+        $this->assertNotEmpty($instance->getCompensationActions());
+    }
+}
+```
+
+### Performance Optimization
+
+```php
+// Use database transactions for consistency
+class DatabaseActionBase implements WorkflowAction
+{
+    protected function executeInTransaction(callable $callback): ActionResult
+    {
+        return DB::transaction(function () use ($callback) {
+            return $callback();
+        });
+    }
+}
+
+// Implement bulk operations
+class BulkNotificationAction implements WorkflowAction
+{
+    public function execute(WorkflowContext $context): ActionResult
+    {
+        $users = $context->getData()['users'];
+        
+        // Process in chunks to avoid memory issues
+        collect($users)->chunk(100)->each(function ($chunk) {
+            Notification::send($chunk, new WorkflowNotification());
+        });
+        
+        return ActionResult::success(['notified_count' => count($users)]);
+    }
+}
+```
+
+### Configuration Management
+
+```php
+// Use environment-specific configurations
+// config/workflow-engine.php
+return [
+    'storage' => [
+        'driver' => env('WORKFLOW_STORAGE_DRIVER', 'database'),
+    ],
+    
+    'timeouts' => [
+        'default' => env('WORKFLOW_DEFAULT_TIMEOUT', '1 hour'),
+        'payment' => env('WORKFLOW_PAYMENT_TIMEOUT', '5 minutes'),
+        'approval' => env('WORKFLOW_APPROVAL_TIMEOUT', '2 days'),
+    ],
+    
+    'retries' => [
+        'api_calls' => env('WORKFLOW_API_RETRY_ATTEMPTS', 3),
+        'email_sending' => env('WORKFLOW_EMAIL_RETRY_ATTEMPTS', 2),
+    ],
+    
+    'notifications' => [
+        'slack_webhook' => env('WORKFLOW_SLACK_WEBHOOK'),
+        'email_alerts' => env('WORKFLOW_EMAIL_ALERTS', 'admin@company.com'),
+    ],
+];
+```
+
+### Common Pitfalls to Avoid
+
+```php
+// ❌ Don't store large data in workflow context
+$badContext = [
+    'user_data' => User::with('orders', 'preferences', 'history')->find(1)->toArray(), // Too much data
+    'large_file_content' => file_get_contents('huge-file.pdf'), // Memory issues
+];
+
+// ✅ Store references instead
+$goodContext = [
+    'user_id' => 1,
+    'file_path' => '/storage/files/huge-file.pdf',
+    'reference_id' => 'REF-123',
+];
+
+// ❌ Don't make actions stateful
+class BadStatefulAction implements WorkflowAction
+{
+    private $counter = 0; // This won't work in distributed systems
+    
+    public function execute(WorkflowContext $context): ActionResult
+    {
+        $this->counter++; // State is lost between executions
+        return ActionResult::success(['count' => $this->counter]);
+    }
+}
+
+// ✅ Keep state in the workflow context
+class GoodStatelessAction implements WorkflowAction
+{
+    public function execute(WorkflowContext $context): ActionResult
+    {
+        $data = $context->getData();
+        $count = ($data['counter'] ?? 0) + 1;
+        
+        return ActionResult::success(['counter' => $count]);
+    }
+}
+```
+
+---
+
+## �📚 Documentation
 
 - [Full Documentation](https://docs.solution-forest.com/workflow-engine)
 - [API Reference](https://docs.solution-forest.com/workflow-engine/api)

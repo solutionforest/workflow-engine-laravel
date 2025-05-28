@@ -19,7 +19,9 @@ class LaravelWorkflowEngine
      */
     public function start(array|string $definition, array $initialData = []): WorkflowInstance
     {
-        return $this->engine->start($definition, $initialData);
+        $workflowId = 'workflow-' . uniqid();
+        $this->engine->start($workflowId, $definition, $initialData);
+        return $this->engine->getWorkflow($workflowId);
     }
 
     /**

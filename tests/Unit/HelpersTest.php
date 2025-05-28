@@ -1,82 +1,68 @@
 <?php
 
-namespace SolutionForest\WorkflowMastery\Tests\Unit;
-
 use SolutionForest\WorkflowMastery\Core\WorkflowEngine;
-use SolutionForest\WorkflowMastery\Tests\TestCase;
 
-class HelpersTest extends TestCase
-{
-    /** @test */
-    public function workflow_helper_returns_engine_instance(): void
-    {
-        $engine = workflow();
+test('workflow helper returns engine instance', function () {
+    $engine = workflow();
 
-        $this->assertInstanceOf(WorkflowEngine::class, $engine);
-    }
+    expect($engine)->toBeInstanceOf(WorkflowEngine::class);
+});
 
-    /** @test */
-    public function start_workflow_helper_works(): void
-    {
-        $definition = [
-            'name' => 'Helper Test Workflow',
-            'steps' => [
-                [
-                    'id' => 'step1',
-                    'name' => 'First Step',
-                    'action' => 'log',
-                    'parameters' => ['message' => 'Hello from helper'],
-                ],
+test('start workflow helper works', function () {
+    $definition = [
+        'name' => 'Helper Test Workflow',
+        'steps' => [
+            [
+                'id' => 'step1',
+                'name' => 'First Step',
+                'action' => 'log',
+                'parameters' => ['message' => 'Hello from helper'],
             ],
-        ];
+        ],
+    ];
 
-        $workflowId = start_workflow('helper-test', $definition);
+    $workflowId = start_workflow('helper-test', $definition);
 
-        $this->assertNotEmpty($workflowId);
-        $this->assertEquals('helper-test', $workflowId);
-    }
+    expect($workflowId)->not->toBeEmpty();
+    expect($workflowId)->toBe('helper-test');
+});
 
-    /** @test */
-    public function get_workflow_helper_works(): void
-    {
-        $definition = [
-            'name' => 'Helper Test Workflow',
-            'steps' => [
-                [
-                    'id' => 'step1',
-                    'name' => 'First Step',
-                    'action' => 'log',
-                    'parameters' => ['message' => 'Hello from helper'],
-                ],
+test('get workflow helper works', function () {
+    $definition = [
+        'name' => 'Helper Test Workflow',
+        'steps' => [
+            [
+                'id' => 'step1',
+                'name' => 'First Step',
+                'action' => 'log',
+                'parameters' => ['message' => 'Hello from helper'],
             ],
-        ];
+        ],
+    ];
 
-        $workflowId = start_workflow('helper-test-get', $definition);
-        $instance = get_workflow($workflowId);
+    $workflowId = start_workflow('helper-test-get', $definition);
+    $instance = get_workflow($workflowId);
 
-        $this->assertEquals($workflowId, $instance->getId());
-        $this->assertEquals('Helper Test Workflow', $instance->getName());
-    }
+    expect($instance->getId())->toBe($workflowId);
+    expect($instance->getName())->toBe('Helper Test Workflow');
+});
 
-    /** @test */
-    public function cancel_workflow_helper_works(): void
-    {
-        $definition = [
-            'name' => 'Helper Test Workflow',
-            'steps' => [
-                [
-                    'id' => 'step1',
-                    'name' => 'First Step',
-                    'action' => 'log',
-                    'parameters' => ['message' => 'Hello from helper'],
-                ],
+test('cancel workflow helper works', function () {
+    $definition = [
+        'name' => 'Helper Test Workflow',
+        'steps' => [
+            [
+                'id' => 'step1',
+                'name' => 'First Step',
+                'action' => 'log',
+                'parameters' => ['message' => 'Hello from helper'],
             ],
-        ];
+        ],
+    ];
 
-        $workflowId = start_workflow('helper-test-cancel', $definition);
-        cancel_workflow($workflowId, 'Test cancellation');
+    $workflowId = start_workflow('helper-test-cancel', $definition);
+    cancel_workflow($workflowId, 'Test cancellation');
 
-        $instance = get_workflow($workflowId);
-        $this->assertEquals('cancelled', $instance->getState()->value);
-    }
-}
+    $instance = get_workflow($workflowId);
+    expect($instance->getState()->value)->toBe('cancelled');
+});
