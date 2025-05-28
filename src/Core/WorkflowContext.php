@@ -15,7 +15,7 @@ readonly class WorkflowContext
         public array $data = [],
         public array $config = [],
         public ?WorkflowInstance $instance = null,
-        public DateTime $executedAt = new DateTime()
+        public DateTime $executedAt = new DateTime
     ) {}
 
     /**
@@ -72,7 +72,7 @@ readonly class WorkflowContext
     {
         $newData = $this->data;
         data_set($newData, $key, $value);
-        
+
         return new self(
             workflowId: $this->workflowId,
             stepId: $this->stepId,

@@ -6,7 +6,7 @@ use Attribute;
 
 /**
  * Condition attribute for conditional execution
- * 
+ *
  * @example
  * #[Condition('user.email is not null')]
  * #[Condition('order.amount > 100')]

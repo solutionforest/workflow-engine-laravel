@@ -36,7 +36,7 @@ enum WorkflowState: string
      */
     public function color(): string
     {
-        return match($this) {
+        return match ($this) {
             self::PENDING => 'gray',
             self::RUNNING => 'blue',
             self::WAITING => 'yellow',
@@ -52,7 +52,7 @@ enum WorkflowState: string
      */
     public function icon(): string
     {
-        return match($this) {
+        return match ($this) {
             self::PENDING => '⏳',
             self::RUNNING => '▶️',
             self::WAITING => '⏸️',
@@ -68,7 +68,7 @@ enum WorkflowState: string
      */
     public function canTransitionTo(self $state): bool
     {
-        return match($this) {
+        return match ($this) {
             self::PENDING => in_array($state, [self::RUNNING, self::CANCELLED]),
             self::RUNNING => in_array($state, [self::WAITING, self::PAUSED, self::COMPLETED, self::FAILED, self::CANCELLED]),
             self::WAITING => in_array($state, [self::RUNNING, self::FAILED, self::CANCELLED]),
@@ -82,7 +82,7 @@ enum WorkflowState: string
      */
     public function label(): string
     {
-        return match($this) {
+        return match ($this) {
             self::PENDING => 'Pending',
             self::RUNNING => 'Running',
             self::WAITING => 'Waiting',

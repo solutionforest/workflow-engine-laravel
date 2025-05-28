@@ -6,7 +6,7 @@ use SolutionForest\WorkflowMastery\Contracts\WorkflowAction;
 
 /**
  * Fluent workflow builder for simplified workflow creation
- * 
+ *
  * @example
  * $workflow = WorkflowBuilder::create('user-onboarding')
  *     ->description('Complete user onboarding process')
@@ -20,11 +20,17 @@ use SolutionForest\WorkflowMastery\Contracts\WorkflowAction;
 class WorkflowBuilder
 {
     private string $name;
+
     private string $version = '1.0';
+
     private string $description = '';
+
     private array $steps = [];
+
     private array $transitions = [];
+
     private array $metadata = [];
+
     private array $conditionalSteps = [];
 
     private function __construct(string $name)
@@ -46,6 +52,7 @@ class WorkflowBuilder
     public function description(string $description): self
     {
         $this->description = $description;
+
         return $this;
     }
 
@@ -55,6 +62,7 @@ class WorkflowBuilder
     public function version(string $version): self
     {
         $this->version = $version;
+
         return $this;
     }
 
@@ -75,6 +83,7 @@ class WorkflowBuilder
             'timeout' => $timeout,
             'retry_attempts' => $retryAttempts,
         ];
+
         return $this;
     }
 
@@ -87,7 +96,8 @@ class WorkflowBuilder
         ?int $timeout = null,
         int $retryAttempts = 0
     ): self {
-        $stepId = 'step_' . (count($this->steps) + 1);
+        $stepId = 'step_'.(count($this->steps) + 1);
+
         return $this->addStep($stepId, $action, $config, $timeout, $retryAttempts);
     }
 
@@ -100,7 +110,8 @@ class WorkflowBuilder
         ?int $timeout = null,
         int $retryAttempts = 0
     ): self {
-        $stepId = 'step_' . (count($this->steps) + 1);
+        $stepId = 'step_'.(count($this->steps) + 1);
+
         return $this->addStep($stepId, $action, $config, $timeout, $retryAttempts);
     }
 
@@ -112,12 +123,12 @@ class WorkflowBuilder
         $originalStepsCount = count($this->steps);
         $callback($this);
         $newStepsCount = count($this->steps);
-        
+
         // Mark new steps as conditional
         for ($i = $originalStepsCount; $i < $newStepsCount; $i++) {
             $this->steps[$i]['condition'] = $condition;
         }
-        
+
         return $this;
     }
 
@@ -131,7 +142,7 @@ class WorkflowBuilder
         array $data = []
     ): self {
         return $this->addStep(
-            'email_' . count($this->steps),
+            'email_'.count($this->steps),
             'SolutionForest\\WorkflowMastery\\Actions\\EmailAction',
             [
                 'template' => $template,
@@ -145,14 +156,14 @@ class WorkflowBuilder
     /**
      * Add delay step (common pattern)
      */
-    public function delay(int $seconds = null, int $minutes = null, int $hours = null): self
+    public function delay(?int $seconds = null, ?int $minutes = null, ?int $hours = null): self
     {
         $totalSeconds = $seconds ?? 0;
         $totalSeconds += ($minutes ?? 0) * 60;
         $totalSeconds += ($hours ?? 0) * 3600;
 
         return $this->addStep(
-            'delay_' . count($this->steps),
+            'delay_'.count($this->steps),
             'SolutionForest\\WorkflowMastery\\Actions\\DelayAction',
             ['seconds' => $totalSeconds]
         );
@@ -168,7 +179,7 @@ class WorkflowBuilder
         array $headers = []
     ): self {
         return $this->addStep(
-            'http_' . count($this->steps),
+            'http_'.count($this->steps),
             'SolutionForest\\WorkflowMastery\\Actions\\HttpAction',
             [
                 'url' => $url,
@@ -185,7 +196,7 @@ class WorkflowBuilder
     public function condition(string $condition): self
     {
         return $this->addStep(
-            'condition_' . count($this->steps),
+            'condition_'.count($this->steps),
             'SolutionForest\\WorkflowMastery\\Actions\\ConditionAction',
             ['condition' => $condition]
         );
@@ -197,6 +208,7 @@ class WorkflowBuilder
     public function withMetadata(array $metadata): self
     {
         $this->metadata = array_merge($this->metadata, $metadata);
+
         return $this;
     }
 
@@ -237,7 +249,7 @@ class WorkflowBuilder
      */
     public static function quick(): QuickWorkflowBuilder
     {
-        return new QuickWorkflowBuilder();
+        return new QuickWorkflowBuilder;
     }
 }
 
@@ -295,10 +307,10 @@ class QuickWorkflowBuilder
                 subject: 'Document Review Request'
             )
             ->addStep('review_document', 'App\\Actions\\ReviewDocumentAction')
-            ->when('review.approved', function($builder) {
+            ->when('review.approved', function ($builder) {
                 $builder->addStep('approve_document', 'App\\Actions\\ApproveDocumentAction');
             })
-            ->when('review.rejected', function($builder) {
+            ->when('review.rejected', function ($builder) {
                 $builder->addStep('reject_document', 'App\\Actions\\RejectDocumentAction');
             });
     }

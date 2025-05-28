@@ -116,6 +116,7 @@ class WorkflowDefinition
             // Handle both Step objects and array data
             if ($stepData instanceof Step) {
                 $steps[$stepData->getId()] = $stepData;
+
                 continue;
             }
 

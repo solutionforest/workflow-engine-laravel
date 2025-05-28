@@ -2,13 +2,14 @@
 
 namespace SolutionForest\WorkflowMastery\Support;
 
-use SolutionForest\WorkflowMastery\Core\{WorkflowBuilder, WorkflowEngine};
-use SolutionForest\WorkflowMastery\Contracts\StorageAdapter;
 use Illuminate\Contracts\Events\Dispatcher;
+use SolutionForest\WorkflowMastery\Contracts\StorageAdapter;
+use SolutionForest\WorkflowMastery\Core\WorkflowBuilder;
+use SolutionForest\WorkflowMastery\Core\WorkflowEngine;
 
 /**
  * Simple workflow helper for quick workflow creation and execution
- * 
+ *
  * This class provides a simplified API for common workflow operations,
  * reducing the learning curve for new users.
  */
@@ -23,7 +24,7 @@ class SimpleWorkflow
 
     /**
      * Create a simple sequential workflow
-     * 
+     *
      * @example
      * SimpleWorkflow::sequential('user-onboarding', [
      *     SendWelcomeEmailAction::class,
@@ -34,20 +35,20 @@ class SimpleWorkflow
     public static function sequential(string $name, array $actions, array $context = []): string
     {
         $builder = WorkflowBuilder::create($name);
-        
+
         foreach ($actions as $action) {
             $builder->then($action);
         }
 
         $workflow = $builder->build();
         $engine = app(WorkflowEngine::class);
-        
-        return $engine->start($name . '-' . uniqid(), $workflow->toArray(), $context);
+
+        return $engine->start($name.'-'.uniqid(), $workflow->toArray(), $context);
     }
 
     /**
      * Create a workflow with conditions
-     * 
+     *
      * @example
      * SimpleWorkflow::conditional('order-processing', [
      *     'validate' => ValidateOrderAction::class,
@@ -64,11 +65,11 @@ class SimpleWorkflow
     public static function conditional(string $name, array $definition, array $context = []): string
     {
         $builder = WorkflowBuilder::create($name);
-        
+
         foreach ($definition as $key => $value) {
             if (str_starts_with($key, 'if ')) {
                 $condition = substr($key, 3);
-                $builder->when($condition, function($b) use ($value) {
+                $builder->when($condition, function ($b) use ($value) {
                     foreach ($value as $action) {
                         $b->then($action);
                     }
@@ -85,24 +86,24 @@ class SimpleWorkflow
 
         $workflow = $builder->build();
         $engine = app(WorkflowEngine::class);
-        
-        return $engine->start($name . '-' . uniqid(), $workflow->toArray(), $context);
+
+        return $engine->start($name.'-'.uniqid(), $workflow->toArray(), $context);
     }
 
     /**
      * Create workflow from quick templates
-     * 
+     *
      * @example
      * SimpleWorkflow::quick()->userOnboarding()->start(['user_id' => 123])
      */
     public static function quick(): QuickWorkflowStarter
     {
-        return new QuickWorkflowStarter();
+        return new QuickWorkflowStarter;
     }
 
     /**
      * Run a single action as a workflow
-     * 
+     *
      * @example
      * SimpleWorkflow::runAction(SendEmailAction::class, [
      *     'to' => 'user@example.com',
@@ -112,7 +113,7 @@ class SimpleWorkflow
     public static function runAction(string $actionClass, array $context = []): string
     {
         return self::sequential(
-            'single-action-' . class_basename($actionClass),
+            'single-action-'.class_basename($actionClass),
             [$actionClass],
             $context
         );
@@ -157,9 +158,9 @@ class QuickWorkflowInstance
     {
         $workflow = $this->builder->build();
         $engine = app(WorkflowEngine::class);
-        
+
         return $engine->start(
-            $workflow->getName() . '-' . uniqid(),
+            $workflow->getName().'-'.uniqid(),
             $workflow->toArray(),
             $context
         );
@@ -168,6 +169,7 @@ class QuickWorkflowInstance
     public function customize(callable $callback): self
     {
         $callback($this->builder);
+
         return $this;
     }
 }
