@@ -6,48 +6,1130 @@
 [![GitHub Code Style Action Status](https://img.shields.io/github/actions/workflow/status/solution-forest/workflow-mastery/fix-php-code-style-issues.yml?branch=main&label=code%20style&style=flat-square)](https://github.com/solution-forest/workflow-mastery/actions?query=workflow%3A"Fix+PHP+code+style+issues"+branch%3Amain)
 [![Total Downloads](https://img.shields.io/packagist/dt/solution-forest/workflow-mastery.svg?style=flat-square)](https://packagist.org/packages/solution-forest/workflow-mastery)
 
-## ⚠️ WARNING: DEVELOPMENT STATUS
+> **A powerful, framework-agnostic workflow engine for PHP with seamless Laravel integration**
 
-**This package is currently under active development and is NOT READY FOR PRODUCTION USE.**
+**Workflow Mastery** transforms complex business processes into maintainable, executable workflows. Built with modern PHP 8.3+ features, it provides enterprise-grade workflow orchestration while remaining framework-agnostic at its core.
 
-Features may be incomplete, APIs might change, and there could be breaking changes. Use at your own risk in development environments only.
+## ⚠️ Development Status
 
----
+**This package is currently under active development and NOT READY FOR PRODUCTION USE.**
 
-Inspired by the best ideas from many languages and platforms, **Workflow Mastery** aims to be a universal, modular, and extensible workflow engine. While it integrates seamlessly with Laravel, its core logic is designed to be framework-agnostic, so you can use it anywhere.
-
----
-
-## 🎯 What is a Workflow Engine?
-
-A **workflow engine** is a sophisticated software component that orchestrates and executes defined sequences of tasks, called workflows. It enables you to:
-
-- **Model Complex Business Processes**: Transform business logic into executable, visual workflows
-- **Automate Repetitive Tasks**: Reduce manual intervention and human error
-- **Coordinate System Integration**: Seamlessly connect different services and modules
-- **Ensure Process Consistency**: Guarantee that business rules are followed every time
-- **Enable Process Evolution**: Adapt to changing requirements without code modifications
-
-### 🌟 Why Choose Our Workflow Engine?
-
-**Framework-Agnostic Core**: While this package provides seamless Laravel integration, the core workflow engine is completely independent of Laravel or any specific framework. This means:
-
-- ✅ **Pure PHP Implementation**: Core business logic written in vanilla PHP
-- ✅ **Universal Compatibility**: Use with Symfony, CodeIgniter, or any PHP framework
-- ✅ **Standalone Usage**: Deploy in legacy systems or microservices
-- ✅ **Easy Testing**: Unit test workflow logic without framework dependencies
-- ✅ **Future-Proof**: Migrate between frameworks without rewriting workflows
+Features may be incomplete, APIs are subject to change, and breaking changes may occur. Please use only in development environments.
 
 ---
 
-## 🚀 Real-World Use Cases
+## ✨ Key Features
+
+- 🚀 **Framework-Agnostic Core** - Use with Laravel, Symfony, or any PHP framework
+- 🔄 **State Management** - Persistent workflow states with multiple storage adapters
+- ⚡ **Parallel Execution** - Run multiple workflow steps simultaneously
+- 🛡️ **Error Handling** - Built-in retry logic and compensation patterns
+- 🎯 **Conditional Logic** - Dynamic workflow paths based on data conditions
+- 📊 **Event System** - Comprehensive workflow lifecycle events
+- 🔧 **Extensible Actions** - Easy to create custom workflow actions
+- 📱 **Modern PHP** - Built with PHP 8.3+ features (readonly properties, enums, etc.)
+
+---
+
+## 📦 Installation
+
+### Requirements
+
+- **PHP**: 8.3 or higher
+- **Laravel**: 10.x, 11.x, or 12.x (for Laravel integration)
+- **Extensions**: `json`, `mbstring`
+
+### Composer Installation
+
+Install the package via Composer:
+
+```bash
+composer require solution-forest/workflow-mastery
+```
+
+### Laravel Integration
+
+#### 1. Publish Configuration
+
+```bash
+php artisan vendor:publish --tag="workflow-mastery-config"
+```
+
+#### 2. Publish and Run Migrations
+
+```bash
+php artisan vendor:publish --tag="workflow-mastery-migrations"
+php artisan migrate
+```
+
+#### 3. Optional: Publish Views
+
+```bash
+php artisan vendor:publish --tag="workflow-mastery-views"
+```
+
+#### 4. Environment Configuration
+
+Add these variables to your `.env` file:
+
+```env
+# Workflow Storage Configuration
+WORKFLOW_STORAGE_DRIVER=database
+WORKFLOW_DB_CONNECTION=default
+
+# Workflow Timeouts
+WORKFLOW_DEFAULT_TIMEOUT="1 hour"
+WORKFLOW_MAX_TIMEOUT="24 hours"
+
+# Retry Configuration
+WORKFLOW_DEFAULT_RETRY_ATTEMPTS=3
+WORKFLOW_RETRY_DELAY="5 minutes"
+
+# Event System
+WORKFLOW_EVENTS_ENABLED=true
+```
+
+### Framework-Agnostic Usage
+
+For non-Laravel projects, use the core engine directly:
+
+```php
+use SolutionForest\WorkflowMastery\Core\WorkflowEngine;
+use SolutionForest\WorkflowMastery\Storage\FileStorage;
+use SolutionForest\WorkflowMastery\Core\StateManager;
+
+// Initialize components
+$storage = new FileStorage('/path/to/workflows');
+$stateManager = new StateManager($storage);
+$engine = new WorkflowEngine($stateManager);
+
+// Start a workflow
+$workflowId = $engine->start('my-workflow', $workflowDefinition, $initialData);
+```
+
+---
+
+## 🚀 Quick Start
+
+### 1. Create Your First Action
+
+```php
+<?php
+
+namespace App\Workflows\Actions;
+
+use SolutionForest\WorkflowMastery\Contracts\WorkflowAction;
+use SolutionForest\WorkflowMastery\Core\ActionResult;
+use SolutionForest\WorkflowMastery\Core\WorkflowContext;
+
+class SendWelcomeEmailAction implements WorkflowAction
+{
+    public function execute(WorkflowContext $context): ActionResult
+    {
+        $data = $context->getData();
+        
+        // Your business logic here
+        Mail::to($data['email'])->send(new WelcomeEmail($data['user']));
+        
+        return ActionResult::success(['email_sent' => true, 'sent_at' => now()]);
+    }
+
+    public function canExecute(WorkflowContext $context): bool
+    {
+        $data = $context->getData();
+        return !empty($data['email']) && filter_var($data['email'], FILTER_VALIDATE_EMAIL);
+    }
+
+    public function getName(): string
+    {
+        return 'Send Welcome Email';
+    }
+
+    public function getDescription(): string
+    {
+        return 'Sends a welcome email to the newly registered user';
+    }
+}
+```
+
+### 2. Define a Workflow
+
+```php
+<?php
+
+use App\Workflows\Actions\SendWelcomeEmailAction;
+use App\Workflows\Actions\CreateUserProfileAction;
+
+$userRegistrationWorkflow = [
+    'name' => 'User Registration Process',
+    'version' => '1.0',
+    'description' => 'Handles new user registration workflow',
+    'steps' => [
+        [
+            'id' => 'send_welcome',
+            'name' => 'Send Welcome Email',
+            'action' => SendWelcomeEmailAction::class,
+        ],
+        [
+            'id' => 'create_profile',
+            'name' => 'Create User Profile',
+            'action' => CreateUserProfileAction::class,
+        ],
+    ],
+    'transitions' => [
+        [
+            'from' => 'send_welcome',
+            'to' => 'create_profile',
+            'condition' => 'email_sent == true'
+        ],
+    ],
+];
+```
+
+### 3. Execute the Workflow
+
+#### Using Laravel Facade
+
+```php
+use SolutionForest\WorkflowMastery\Facades\WorkflowMastery;
+
+// In your controller
+public function registerUser(Request $request)
+{
+    $user = User::create($request->validated());
+
+    // Start the workflow
+    $workflowInstance = WorkflowMastery::start($userRegistrationWorkflow, [
+        'user_id' => $user->id,
+        'email' => $user->email,
+        'user' => $user->toArray(),
+    ]);
+
+    return response()->json([
+        'user' => $user,
+        'workflow_id' => $workflowInstance->getId(),
+        'status' => $workflowInstance->getState()->value,
+    ]);
+}
+```
+
+#### Using Helper Functions
+
+```php
+// Start a workflow
+$workflowId = start_workflow('user-registration', $userRegistrationWorkflow, $userData);
+
+// Check workflow status
+$status = get_workflow_status($workflowId);
+
+// Resume a paused workflow
+resume_workflow($workflowId);
+
+// Cancel a workflow
+cancel_workflow($workflowId);
+```
+
+---
+
+## 💼 Real-World Examples
 
 ### E-commerce Order Processing
+
+```php
+$orderProcessingWorkflow = [
+    'name' => 'E-commerce Order Processing',
+    'steps' => [
+        ['id' => 'validate_order', 'action' => ValidateOrderAction::class],
+        ['id' => 'check_inventory', 'action' => CheckInventoryAction::class],
+        ['id' => 'process_payment', 'action' => ProcessPaymentAction::class],
+        ['id' => 'reserve_items', 'action' => ReserveInventoryAction::class],
+        ['id' => 'create_shipment', 'action' => CreateShipmentAction::class],
+        ['id' => 'send_confirmation', 'action' => SendOrderConfirmationAction::class],
+    ],
+    'transitions' => [
+        ['from' => 'validate_order', 'to' => 'check_inventory', 'condition' => 'order.valid == true'],
+        ['from' => 'check_inventory', 'to' => 'process_payment', 'condition' => 'inventory.available == true'],
+        ['from' => 'process_payment', 'to' => 'reserve_items', 'condition' => 'payment.successful == true'],
+        ['from' => 'reserve_items', 'to' => 'create_shipment'],
+        ['from' => 'create_shipment', 'to' => 'send_confirmation'],
+    ],
+    'error_handling' => [
+        'payment_failure' => [
+            'compensation' => RefundAction::class,
+            'retry_attempts' => 3,
+        ],
+        'inventory_shortage' => [
+            'compensation' => ReleaseReservationAction::class,
+            'notification' => NotifyCustomerAction::class,
+        ],
+    ],
+];
+```
+
+### Document Approval Process
+
+```php
+$documentApprovalWorkflow = [
+    'name' => 'Document Approval Process',
+    'steps' => [
+        ['id' => 'submit_document', 'action' => SubmitDocumentAction::class],
+        ['id' => 'manager_review', 'action' => ManagerReviewAction::class, 'timeout' => '2 days'],
+        ['id' => 'legal_review', 'action' => LegalReviewAction::class, 'timeout' => '5 days'],
+        ['id' => 'compliance_check', 'action' => ComplianceCheckAction::class],
+        ['id' => 'final_approval', 'action' => FinalApprovalAction::class],
+        ['id' => 'archive_document', 'action' => ArchiveDocumentAction::class],
+    ],
+    'parallel_execution' => [
+        ['manager_review', 'legal_review'], // These can run simultaneously
+    ],
+    'escalation' => [
+        'timeout_action' => EscalateToSeniorManagerAction::class,
+        'notification' => TimeoutNotificationAction::class,
+    ],
+];
+```
+
+---
+
+## 🛠️ Laravel Developer Guide
+
+### Working with Controllers
+
+```php
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use SolutionForest\WorkflowMastery\Facades\WorkflowMastery;
+
+class WorkflowController extends Controller
+{
+    public function startOrderProcessing(Request $request)
+    {
+        $order = Order::create($request->validated());
+        
+        $workflow = WorkflowMastery::start($this->getOrderWorkflow(), [
+            'order_id' => $order->id,
+            'customer_id' => $order->customer_id,
+            'total_amount' => $order->total,
+            'items' => $order->items->toArray(),
+        ]);
+
+        return response()->json([
+            'order_id' => $order->id,
+            'workflow_id' => $workflow->getId(),
+            'status' => $workflow->getState()->value,
+        ]);
+    }
+
+    public function getWorkflowStatus(string $workflowId)
+    {
+        try {
+            $workflow = WorkflowMastery::getWorkflow($workflowId);
+            
+            return response()->json([
+                'workflow_id' => $workflow->getId(),
+                'state' => $workflow->getState()->value,
+                'current_step' => $workflow->getCurrentStep()?->getId(),
+                'progress_percentage' => $this->calculateProgress($workflow),
+                'created_at' => $workflow->getCreatedAt(),
+                'updated_at' => $workflow->getUpdatedAt(),
+                'data' => $workflow->getData(),
+            ]);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['error' => 'Workflow not found'], 404);
+        }
+    }
+
+    public function listWorkflows(Request $request)
+    {
+        $workflows = WorkflowMastery::listWorkflows([
+            'state' => $request->get('state'),
+            'limit' => $request->get('limit', 20),
+            'offset' => $request->get('offset', 0),
+        ]);
+
+        return response()->json($workflows);
+    }
+}
+```
+
+### Queue Integration
+
+For long-running workflows, integrate with Laravel's queue system:
+
+```php
+<?php
+
+namespace App\Workflows\Actions;
+
+use Illuminate\Support\Facades\Queue;
+use SolutionForest\WorkflowMastery\Contracts\WorkflowAction;
+
+class ProcessLargeDatasetAction implements WorkflowAction
+{
+    public function execute(WorkflowContext $context): ActionResult
+    {
+        $data = $context->getData();
+        
+        // Dispatch heavy processing to queue
+        $job = new ProcessDatasetJob($data['dataset_id'], $data['parameters']);
+        Queue::push($job);
+        
+        return ActionResult::success([
+            'status' => 'queued',
+            'job_id' => $job->getId(),
+            'estimated_duration' => '30 minutes',
+        ]);
+    }
+
+    public function canExecute(WorkflowContext $context): bool
+    {
+        $data = $context->getData();
+        return !empty($data['dataset_id']) && !empty($data['parameters']);
+    }
+
+    public function getName(): string
+    {
+        return 'Process Large Dataset';
+    }
+
+    public function getDescription(): string
+    {
+        return 'Processes large datasets asynchronously using Laravel queues';
+    }
+}
+```
+
+### Event Listeners
+
+Listen to workflow events for monitoring and logging:
+
+```php
+<?php
+
+namespace App\Listeners;
+
+use SolutionForest\WorkflowMastery\Events\WorkflowStarted;
+use SolutionForest\WorkflowMastery\Events\WorkflowCompleted;
+use SolutionForest\WorkflowMastery\Events\WorkflowFailed;
+
+class WorkflowEventListener
+{
+    public function handleWorkflowStarted(WorkflowStarted $event): void
+    {
+        Log::info('Workflow started', [
+            'workflow_id' => $event->workflowInstance->getId(),
+            'definition_name' => $event->workflowInstance->getDefinition()->getName(),
+        ]);
+    }
+
+    public function handleWorkflowCompleted(WorkflowCompleted $event): void
+    {
+        Log::info('Workflow completed successfully', [
+            'workflow_id' => $event->workflowInstance->getId(),
+            'duration' => $event->workflowInstance->getDuration(),
+        ]);
+        
+        // Send notification, update metrics, etc.
+    }
+
+    public function handleWorkflowFailed(WorkflowFailed $event): void
+    {
+        Log::error('Workflow failed', [
+            'workflow_id' => $event->workflowInstance->getId(),
+            'error' => $event->error->getMessage(),
+            'step' => $event->failedStep?->getId(),
+        ]);
+        
+        // Send alert, trigger compensation, etc.
+    }
+}
+```
+
+### Custom Storage Adapter
+
+Create a custom storage adapter for specific needs:
+
+```php
+<?php
+
+namespace App\Workflows\Storage;
+
+use SolutionForest\WorkflowMastery\Contracts\StorageAdapter;
+use SolutionForest\WorkflowMastery\Core\WorkflowInstance;
+
+class RedisStorageAdapter implements StorageAdapter
+{
+    public function __construct(private \Redis $redis) {}
+
+    public function save(WorkflowInstance $instance): void
+    {
+        $key = "workflow:{$instance->getId()}";
+        $data = serialize($instance);
+        $this->redis->setex($key, 86400, $data); // 24 hours TTL
+    }
+
+    public function load(string $id): WorkflowInstance
+    {
+        $key = "workflow:{$id}";
+        $data = $this->redis->get($key);
+        
+        if (!$data) {
+            throw new \InvalidArgumentException("Workflow not found: {$id}");
+        }
+        
+        return unserialize($data);
+    }
+
+    public function exists(string $id): bool
+    {
+        return $this->redis->exists("workflow:{$id}") > 0;
+    }
+
+    public function delete(string $id): void
+    {
+        $this->redis->del("workflow:{$id}");
+    }
+
+    public function findInstances(array $criteria = []): array
+    {
+        // Implementation for finding workflows by criteria
+        $pattern = "workflow:*";
+        $keys = $this->redis->keys($pattern);
+        
+        $instances = [];
+        foreach ($keys as $key) {
+            $data = $this->redis->get($key);
+            if ($data) {
+                $instances[] = unserialize($data);
+            }
+        }
+        
+        return $this->filterByCriteria($instances, $criteria);
+    }
+}
+```
+
+---
+
+## 🏗️ Architecture Overview
+
+### Core Components
+
+```
+┌─────────────────────────────────────────┐
+│           Laravel Integration           │ ← Framework-specific layer
+├─────────────────────────────────────────┤
+│         Workflow Engine Core           │ ← Pure PHP, framework-agnostic
+│    • WorkflowEngine                     │
+│    • WorkflowDefinition                 │
+│    • WorkflowInstance                   │
+│    • StateManager                       │
+├─────────────────────────────────────────┤
+│            Action System                │ ← Business logic encapsulation
+│    • WorkflowAction Interface           │
+│    • ActionResult                       │
+│    • WorkflowContext                    │
+├─────────────────────────────────────────┤
+│        Storage Adapters                 │ ← Pluggable persistence
+│    • DatabaseStorage                    │
+│    • FileStorage                        │
+│    • MemoryStorage (testing)            │
+└─────────────────────────────────────────┘
+```
+
+### Design Principles
+
+#### 🎯 Separation of Concerns
+- **Workflow Definitions**: Declarative configuration (JSON/PHP arrays)
+- **Business Logic**: Encapsulated in Action classes
+- **State Management**: Handled by the engine core
+- **Framework Integration**: Thin adapter layer
+
+#### 🔄 Event-Driven Architecture
+- **Lifecycle Events**: `WorkflowStarted`, `StepCompleted`, `WorkflowCompleted`, `WorkflowFailed`
+- **Custom Hooks**: Pre/post execution hooks for each step
+- **Observability**: Built-in logging, metrics, and monitoring support
+
+#### 🧩 Extensible Design
+Every component can be extended or replaced:
+- Custom actions implementing `WorkflowAction`
+- Custom storage adapters implementing `StorageAdapter`
+- Custom event listeners for workflow events
+- Custom condition evaluators for complex logic
+
+---
+
+## 🛡️ Advanced Patterns
+
+### Compensation Actions (Saga Pattern)
+
 ```php
 $orderWorkflow = [
-    'name' => 'Order Processing Pipeline',
     'steps' => [
-        'validate_order' => ['action' => ValidateOrderAction::class],
+        [
+            'id' => 'reserve_inventory',
+            'action' => ReserveInventoryAction::class,
+            'compensation' => ReleaseInventoryAction::class,
+        ],
+        [
+            'id' => 'charge_payment',
+            'action' => ChargePaymentAction::class,
+            'compensation' => RefundPaymentAction::class,
+        ],
+        [
+            'id' => 'ship_order',
+            'action' => ShipOrderAction::class,
+            'compensation' => CancelShipmentAction::class,
+        ],
+    ],
+    'error_handling' => [
+        'execute_compensation' => true,
+        'compensation_order' => 'reverse', // Execute in reverse order
+    ],
+];
+```
+
+### Conditional Branching
+
+```php
+$approvalWorkflow = [
+    'steps' => [
+        ['id' => 'check_amount', 'action' => CheckAmountAction::class],
+        ['id' => 'manager_approval', 'action' => ManagerApprovalAction::class],
+        ['id' => 'ceo_approval', 'action' => CEOApprovalAction::class],
+        ['id' => 'auto_approve', 'action' => AutoApproveAction::class],
+    ],
+    'transitions' => [
+        ['from' => 'check_amount', 'to' => 'auto_approve', 'condition' => 'amount < 1000'],
+        ['from' => 'check_amount', 'to' => 'manager_approval', 'condition' => 'amount >= 1000 && amount < 10000'],
+        ['from' => 'check_amount', 'to' => 'ceo_approval', 'condition' => 'amount >= 10000'],
+        ['from' => 'manager_approval', 'to' => 'ceo_approval', 'condition' => 'amount >= 5000'],
+    ],
+];
+```
+
+### Parallel Execution
+
+```php
+$cicdWorkflow = [
+    'steps' => [
+        ['id' => 'build', 'action' => BuildAction::class],
+        ['id' => 'unit_tests', 'action' => UnitTestsAction::class],
+        ['id' => 'integration_tests', 'action' => IntegrationTestsAction::class],
+        ['id' => 'security_scan', 'action' => SecurityScanAction::class],
+        ['id' => 'deploy', 'action' => DeployAction::class],
+    ],
+    'parallel_groups' => [
+        ['unit_tests', 'integration_tests', 'security_scan'], // Run in parallel after build
+    ],
+    'transitions' => [
+        ['from' => 'build', 'to' => 'unit_tests'],
+        ['from' => 'build', 'to' => 'integration_tests'],
+        ['from' => 'build', 'to' => 'security_scan'],
+        ['from' => 'unit_tests', 'to' => 'deploy'],
+        ['from' => 'integration_tests', 'to' => 'deploy'],
+        ['from' => 'security_scan', 'to' => 'deploy'],
+    ],
+    'join_conditions' => [
+        'deploy' => 'all_completed', // Wait for all parallel tasks to complete
+    ],
+];
+```
+
+---
+
+## 📝 Configuration
+
+### Complete Configuration Reference
+
+```php
+<?php
+// config/workflow-mastery.php
+
+return [
+    /*
+    |--------------------------------------------------------------------------
+    | Storage Configuration
+    |--------------------------------------------------------------------------
+    */
+    'storage' => [
+        'driver' => env('WORKFLOW_STORAGE_DRIVER', 'database'),
+        'connection' => env('WORKFLOW_DB_CONNECTION', 'default'),
+        'table' => env('WORKFLOW_TABLE', 'workflow_instances'),
+        
+        // File storage options
+        'file_path' => env('WORKFLOW_FILE_PATH', storage_path('workflows')),
+        
+        // Redis storage options
+        'redis_connection' => env('WORKFLOW_REDIS_CONNECTION', 'default'),
+        'redis_prefix' => env('WORKFLOW_REDIS_PREFIX', 'workflow:'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Timeout Configuration
+    |--------------------------------------------------------------------------
+    */
+    'timeouts' => [
+        'default' => env('WORKFLOW_DEFAULT_TIMEOUT', '1 hour'),
+        'max' => env('WORKFLOW_MAX_TIMEOUT', '24 hours'),
+        'step_specific' => [
+            'email_action' => '5 minutes',
+            'payment_processing' => '30 seconds',
+            'approval_process' => '7 days',
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Retry Configuration
+    |--------------------------------------------------------------------------
+    */
+    'retries' => [
+        'default_attempts' => env('WORKFLOW_DEFAULT_RETRY_ATTEMPTS', 3),
+        'delay' => env('WORKFLOW_RETRY_DELAY', '5 minutes'),
+        'backoff_multiplier' => env('WORKFLOW_BACKOFF_MULTIPLIER', 2),
+        'max_delay' => env('WORKFLOW_MAX_RETRY_DELAY', '1 hour'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Event System
+    |--------------------------------------------------------------------------
+    */
+    'events' => [
+        'enabled' => env('WORKFLOW_EVENTS_ENABLED', true),
+        'listeners' => [
+            // Register your event listeners here
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Performance & Monitoring
+    |--------------------------------------------------------------------------
+    */
+    'performance' => [
+        'max_parallel_executions' => env('WORKFLOW_MAX_PARALLEL', 10),
+        'memory_limit' => env('WORKFLOW_MEMORY_LIMIT', '256M'),
+        'execution_time_limit' => env('WORKFLOW_TIME_LIMIT', 300), // seconds
+    ],
+
+    'monitoring' => [
+        'metrics_enabled' => env('WORKFLOW_METRICS_ENABLED', true),
+        'log_level' => env('WORKFLOW_LOG_LEVEL', 'info'),
+        'slow_query_threshold' => env('WORKFLOW_SLOW_QUERY_THRESHOLD', 1000), // ms
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Security
+    |--------------------------------------------------------------------------
+    */
+    'security' => [
+        'allowed_actions' => [
+            // Whitelist allowed action classes for security
+            // 'App\\Workflows\\Actions\\*',
+        ],
+        'encrypt_sensitive_data' => env('WORKFLOW_ENCRYPT_DATA', false),
+        'audit_enabled' => env('WORKFLOW_AUDIT_ENABLED', true),
+    ],
+];
+```
+
+---
+
+## 🧪 Testing
+
+### Testing Workflows
+
+```php
+<?php
+
+namespace Tests\Feature\Workflows;
+
+use Tests\TestCase;
+use SolutionForest\WorkflowMastery\Core\WorkflowEngine;
+use SolutionForest\WorkflowMastery\Storage\MemoryStorage;
+
+class OrderProcessingWorkflowTest extends TestCase
+{
+    private WorkflowEngine $workflowEngine;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        
+        // Use in-memory storage for testing
+        $storage = new MemoryStorage();
+        $stateManager = new StateManager($storage);
+        $this->workflowEngine = new WorkflowEngine($stateManager);
+    }
+
+    public function test_successful_order_processing()
+    {
+        // Arrange
+        $order = Order::factory()->create(['total' => 150.00]);
+        $workflow = $this->getOrderProcessingWorkflow();
+        
+        // Act
+        $workflowId = $this->workflowEngine->start('order-' . $order->id, $workflow, [
+            'order_id' => $order->id,
+            'total' => $order->total,
+            'customer_id' => $order->customer_id,
+        ]);
+        
+        // Assert
+        $instance = $this->workflowEngine->getWorkflow($workflowId);
+        $this->assertEquals(WorkflowState::COMPLETED, $instance->getState());
+        $this->assertDatabaseHas('orders', [
+            'id' => $order->id,
+            'status' => 'processed',
+        ]);
+    }
+
+    public function test_payment_failure_triggers_compensation()
+    {
+        // Mock payment service to fail
+        $this->mock(PaymentService::class, function ($mock) {
+            $mock->shouldReceive('charge')
+                ->once()
+                ->andThrow(new PaymentException('Insufficient funds'));
+        });
+        
+        $order = Order::factory()->create(['total' => 1000.00]);
+        $workflowId = $this->startOrderWorkflow($order);
+        
+        $instance = $this->workflowEngine->getWorkflow($workflowId);
+        
+        $this->assertEquals(WorkflowState::FAILED, $instance->getState());
+        $this->assertNotEmpty($instance->getCompensationActions());
+    }
+
+    public function test_high_value_order_requires_manager_approval()
+    {
+        $order = Order::factory()->create(['total' => 5000.00]);
+        $workflowId = $this->startOrderWorkflow($order);
+        
+        $instance = $this->workflowEngine->getWorkflow($workflowId);
+        
+        $this->assertEquals(WorkflowState::WAITING, $instance->getState());
+        $this->assertEquals('manager_approval', $instance->getCurrentStep()->getId());
+    }
+
+    private function getOrderProcessingWorkflow(): array
+    {
+        return [
+            'name' => 'Order Processing',
+            'steps' => [
+                ['id' => 'validate', 'action' => ValidateOrderAction::class],
+                ['id' => 'payment', 'action' => ProcessPaymentAction::class],
+                ['id' => 'fulfill', 'action' => FulfillOrderAction::class],
+            ],
+            'transitions' => [
+                ['from' => 'validate', 'to' => 'payment'],
+                ['from' => 'payment', 'to' => 'fulfill'],
+            ],
+        ];
+    }
+}
+```
+
+### Testing Custom Actions
+
+```php
+<?php
+
+namespace Tests\Unit\Workflows\Actions;
+
+use Tests\TestCase;
+use App\Workflows\Actions\SendEmailAction;
+use SolutionForest\WorkflowMastery\Core\WorkflowContext;
+
+class SendEmailActionTest extends TestCase
+{
+    public function test_can_execute_with_valid_email()
+    {
+        $action = new SendEmailAction();
+        $context = new WorkflowContext([
+            'email' => 'test@example.com',
+            'template' => 'welcome',
+        ]);
+
+        $this->assertTrue($action->canExecute($context));
+    }
+
+    public function test_cannot_execute_with_invalid_email()
+    {
+        $action = new SendEmailAction();
+        $context = new WorkflowContext([
+            'email' => 'invalid-email',
+            'template' => 'welcome',
+        ]);
+
+        $this->assertFalse($action->canExecute($context));
+    }
+
+    public function test_execute_sends_email_successfully()
+    {
+        Mail::fake();
+        
+        $action = new SendEmailAction();
+        $context = new WorkflowContext([
+            'email' => 'test@example.com',
+            'template' => 'welcome',
+            'user_name' => 'John Doe',
+        ]);
+
+        $result = $action->execute($context);
+
+        $this->assertTrue($result->isSuccess());
+        $this->assertArrayHasKey('email_sent', $result->getData());
+        
+        Mail::assertSent(WelcomeEmail::class, function ($mail) {
+            return $mail->hasTo('test@example.com');
+        });
+    }
+}
+```
+
+---
+
+## 🚀 Performance & Best Practices
+
+### Optimization Tips
+
+#### 1. **Use Appropriate Storage**
+```php
+// For high-throughput: Use Redis or Memory storage
+'storage' => ['driver' => 'redis']
+
+// For persistence: Use database storage
+'storage' => ['driver' => 'database']
+
+// For testing: Use memory storage
+'storage' => ['driver' => 'memory']
+```
+
+#### 2. **Optimize Action Design**
+```php
+// ✅ Good: Lightweight, focused actions
+class ValidateOrderAction implements WorkflowAction
+{
+    public function execute(WorkflowContext $context): ActionResult
+    {
+        $orderId = $context->getData()['order_id'];
+        $validator = app(OrderValidator::class);
+        
+        $isValid = $validator->validate($orderId);
+        
+        return ActionResult::success(['valid' => $isValid]);
+    }
+}
+
+// ❌ Bad: Heavy actions that do too much
+class ProcessEverythingAction implements WorkflowAction
+{
+    public function execute(WorkflowContext $context): ActionResult
+    {
+        // Don't put all business logic in one action
+        $this->validateOrder($context);
+        $this->processPayment($context);
+        $this->sendEmails($context);
+        $this->updateInventory($context);
+        // ... more logic
+    }
+}
+```
+
+#### 3. **Handle Large Data Sets**
+```php
+// ✅ Store references, not large objects
+$workflowData = [
+    'user_id' => 123,
+    'order_id' => 456,
+    'file_path' => '/storage/large-file.csv',
+];
+
+// ❌ Don't store large data in workflow context
+$workflowData = [
+    'users' => User::all()->toArray(), // Too much data
+    'file_content' => file_get_contents('huge-file.csv'), // Memory issues
+];
+```
+
+#### 4. **Use Queue Integration**
+```php
+class ProcessLargeFileAction implements WorkflowAction
+{
+    public function execute(WorkflowContext $context): ActionResult
+    {
+        // Dispatch to queue for heavy processing
+        ProcessFileJob::dispatch($context->getData()['file_id']);
+        
+        return ActionResult::success(['status' => 'queued']);
+    }
+}
+```
+
+### Common Pitfalls to Avoid
+
+#### ❌ **Stateful Actions**
+```php
+// Don't store state in action instances
+class BadAction implements WorkflowAction
+{
+    private int $counter = 0; // This won't work in distributed systems
+    
+    public function execute(WorkflowContext $context): ActionResult
+    {
+        $this->counter++; // State is lost between executions
+        return ActionResult::success(['count' => $this->counter]);
+    }
+}
+
+// ✅ Keep state in workflow context
+class GoodAction implements WorkflowAction
+{
+    public function execute(WorkflowContext $context): ActionResult
+    {
+        $data = $context->getData();
+        $count = ($data['counter'] ?? 0) + 1;
+        
+        return ActionResult::success(['counter' => $count]);
+    }
+}
+```
+
+#### ❌ **Blocking Operations**
+```php
+// Don't perform blocking operations in actions
+class BadApiAction implements WorkflowAction
+{
+    public function execute(WorkflowContext $context): ActionResult
+    {
+        // This blocks the entire workflow
+        sleep(30);
+        $response = $this->callSlowApi();
+        return ActionResult::success($response);
+    }
+}
+
+// ✅ Use timeouts and async processing
+class GoodApiAction implements WorkflowAction
+{
+    public function execute(WorkflowContext $context): ActionResult
+    {
+        try {
+            $response = Http::timeout(10)->get($apiUrl);
+            return ActionResult::success($response->json());
+        } catch (RequestException $e) {
+            return ActionResult::retry('API timeout, will retry', [
+                'retry_after' => 60,
+                'max_attempts' => 3
+            ]);
+        }
+    }
+}
+```
+
+---
+
+## 🌍 Comparison with Other Workflow Engines
+
+| Feature | Workflow Mastery | Temporal | Laravel Workflow | Zeebe |
+|---------|------------------|----------|------------------|--------|
+| **Language** | PHP | Go/Java/Python | PHP | Java |
+| **Framework** | Framework-agnostic | Framework-agnostic | Laravel-only | Framework-agnostic |
+| **State Persistence** | ✅ Multiple adapters | ✅ Built-in | ✅ Database | ✅ Built-in |
+| **Parallel Execution** | ✅ | ✅ | ❌ | ✅ |
+| **Visual Designer** | 🔄 Planned | ✅ | ❌ | ✅ |
+| **Compensation** | ✅ Saga pattern | ✅ | ❌ | ✅ |
+| **Learning Curve** | Low | Medium | Low | High |
+| **Cloud Native** | ✅ | ✅ | ❌ | ✅ |
+| **Laravel Integration** | ✅ Native | ❌ | ✅ | ❌ |
+
+---
+
+## 🔗 Resources & Links
+
+### Documentation
+- [Full Documentation](https://docs.solutionforest.com/workflow-mastery)
+- [API Reference](https://docs.solutionforest.com/workflow-mastery/api)
+- [Migration Guide](https://docs.solutionforest.com/workflow-mastery/migration)
+
+### Examples & Tutorials
+- [Example Repository](https://github.com/solution-forest/workflow-mastery-examples)
+- [Video Tutorial Series](https://youtube.com/solutionforest)
+- [Blog Posts](https://blog.solutionforest.com/tags/workflow-mastery)
+
+### Community
+- [GitHub Discussions](https://github.com/solution-forest/workflow-mastery/discussions)
+- [Discord Server](https://discord.gg/solutionforest)
+- [Stack Overflow](https://stackoverflow.com/questions/tagged/workflow-mastery)
+
+---
+
+## 📋 Changelog
+
+Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed recently.
+
+## 🤝 Contributing
+
+We welcome contributions! Please see [CONTRIBUTING](CONTRIBUTING.md) for details.
+
+### Development Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/solution-forest/workflow-mastery.git
+cd workflow-mastery
+
+# Install dependencies
+composer install
+
+# Set up testing environment
+cp .env.example .env.testing
+php artisan key:generate --env=testing
+
+# Run tests
+composer test
+
+# Run static analysis
+composer phpstan
+
+# Run code style checks
+composer pint
+```
+
+## 🔒 Security
+
+Please review [our security policy](../../security/policy) on how to report security vulnerabilities.
+
+## 👥 Credits
+
+- [Solution Forest Team](https://github.com/solution-forest)
+- [Alan Lam](https://github.com/lam0819)
+- [All Contributors](../../contributors)
+
+## 📄 License
+
+The MIT License (MIT). Please see [License File](LICENSE.md) for more information.
+
+---
+
+<div align="center">
+
+**Built with ❤️ by [Solution Forest](https://solutionforest.com)**
+
+[![Solution Forest](https://solutionforest.com/images/logo.png)](https://solutionforest.com)
+
+*Empowering developers to build better workflows*
+
+</div>
         'check_inventory' => ['action' => CheckInventoryAction::class],
         'process_payment' => ['action' => ProcessPaymentAction::class],
         'fulfill_order' => ['action' => FulfillOrderAction::class],
