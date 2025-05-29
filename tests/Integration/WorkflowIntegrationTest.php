@@ -1,6 +1,6 @@
 <?php
 
-use SolutionForest\WorkflowMastery\Core\WorkflowState;
+use SolutionForest\WorkflowEngine\Core\WorkflowState;
 
 test('it can execute a complete workflow', function () {
     // Create a more complex workflow with multiple steps

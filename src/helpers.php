@@ -1,12 +1,13 @@
 <?php
 
-use SolutionForest\WorkflowMastery\Core\WorkflowDefinition;
-use SolutionForest\WorkflowMastery\Core\WorkflowEngine;
-use SolutionForest\WorkflowMastery\Core\WorkflowInstance;
+declare(strict_types=1);
+
+use SolutionForest\WorkflowEngine\Core\WorkflowEngine;
+use SolutionForest\WorkflowEngine\Core\WorkflowInstance;
 
 if (! function_exists('workflow')) {
     /**
-     * Get the workflow engine instance
+     * Get the workflow engine instance from the Laravel container.
      */
     function workflow(): WorkflowEngine
     {
@@ -16,50 +17,40 @@ if (! function_exists('workflow')) {
 
 if (! function_exists('start_workflow')) {
     /**
-     * Start a new workflow
+     * Start a new workflow.
      */
-    function start_workflow(string $workflowId, array $definition, array $context = []): string
+    function start_workflow(string $id, array $definition, array $context = []): string
     {
-        return workflow()->start($workflowId, $definition, $context);
-    }
-}
-
-if (! function_exists('resume_workflow')) {
-    /**
-     * Resume an existing workflow
-     */
-    function resume_workflow(string $instanceId): WorkflowInstance
-    {
-        return workflow()->resume($instanceId);
+        return workflow()->start($id, $definition, $context);
     }
 }
 
 if (! function_exists('get_workflow')) {
     /**
-     * Get a workflow instance
+     * Get a workflow instance by ID.
      */
-    function get_workflow(string $instanceId): WorkflowInstance
+    function get_workflow(string $id): WorkflowInstance
     {
-        return workflow()->getInstance($instanceId);
+        return workflow()->getInstance($id);
     }
 }
 
 if (! function_exists('cancel_workflow')) {
     /**
-     * Cancel a workflow
+     * Cancel a workflow.
      */
-    function cancel_workflow(string $instanceId, string $reason = ''): WorkflowInstance
+    function cancel_workflow(string $id, string $reason = 'Cancelled'): void
     {
-        return workflow()->cancel($instanceId, $reason);
+        workflow()->cancel($id, $reason);
     }
 }
 
-if (! function_exists('workflow_definition')) {
+if (! function_exists('list_workflows')) {
     /**
-     * Create a workflow definition from array
+     * List workflows.
      */
-    function workflow_definition(array $definition): WorkflowDefinition
+    function list_workflows(array $filters = []): array
     {
-        return WorkflowDefinition::fromArray($definition);
+        return workflow()->listWorkflows($filters);
     }
 }

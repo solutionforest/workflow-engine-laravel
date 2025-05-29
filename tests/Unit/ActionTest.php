@@ -1,9 +1,9 @@
 <?php
 
-use SolutionForest\WorkflowMastery\Actions\DelayAction;
-use SolutionForest\WorkflowMastery\Actions\LogAction;
-use SolutionForest\WorkflowMastery\Core\ActionResult;
-use SolutionForest\WorkflowMastery\Core\WorkflowContext;
+use SolutionForest\WorkflowEngine\Actions\DelayAction;
+use SolutionForest\WorkflowEngine\Actions\LogAction;
+use SolutionForest\WorkflowEngine\Core\ActionResult;
+use SolutionForest\WorkflowEngine\Core\WorkflowContext;
 
 test('log action can execute', function () {
     $action = new LogAction(['message' => 'Hello {{name}}']);

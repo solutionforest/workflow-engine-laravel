@@ -345,11 +345,11 @@ Alert on workflow failures and performance issues:
 
 ```php
 // In your EventServiceProvider
-use SolutionForest\WorkflowEngine\Events\WorkflowFailed;
+use SolutionForest\WorkflowEngine\Events\WorkflowFailedEvent;
 
 protected $listen = [
-    WorkflowFailed::class => [
-        function (WorkflowFailed $event) {
+    WorkflowFailedEvent::class => [
+        function (WorkflowFailedEvent $event) {
             // Alert if critical workflow fails
             if (in_array($event->workflowName, ['payment-processing', 'order-fulfillment'])) {
                 Alert::critical("Critical workflow failed: {$event->workflowName}", [

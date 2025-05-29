@@ -11,7 +11,7 @@
 ### Install the Package
 
 ```bash
-composer require solution-forest/laravel-workflow-engine
+composer require solution-forest/workflow-engine-laravel
 ```
 
 ### Publish Configuration

@@ -1,12 +1,12 @@
 <?php
 
-namespace SolutionForest\WorkflowMastery\Tests;
+namespace SolutionForest\WorkflowEngine\Laravel\Tests;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Orchestra\Testbench\TestCase as Orchestra;
-use SolutionForest\WorkflowMastery\LaravelWorkflowEngineServiceProvider;
+use SolutionForest\WorkflowEngine\Laravel\Providers\WorkflowEngineServiceProvider;
 
 class TestCase extends Orchestra
 {
@@ -15,7 +15,7 @@ class TestCase extends Orchestra
         parent::setUp();
 
         Factory::guessFactoryNamesUsing(
-            fn (string $modelName) => 'SolutionForest\\WorkflowMastery\\Database\\Factories\\'.class_basename($modelName).'Factory'
+            fn (string $modelName) => 'SolutionForest\\WorkflowEngine\\Laravel\\Database\\Factories\\'.class_basename($modelName).'Factory'
         );
 
         $this->setUpDatabase();
@@ -24,7 +24,7 @@ class TestCase extends Orchestra
     protected function getPackageProviders($app): array
     {
         return [
-            LaravelWorkflowEngineServiceProvider::class,
+            WorkflowEngineServiceProvider::class,
         ];
     }
 

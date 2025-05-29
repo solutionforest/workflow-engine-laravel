@@ -1,6 +1,6 @@
 <?php
 
-use SolutionForest\WorkflowMastery\Core\WorkflowEngine;
+use SolutionForest\WorkflowEngine\Core\WorkflowEngine;
 
 test('workflow helper returns engine instance', function () {
     $engine = workflow();

@@ -1,9 +1,9 @@
 <?php
 
-use SolutionForest\WorkflowMastery\Actions\DelayAction;
-use SolutionForest\WorkflowMastery\Actions\LogAction;
-use SolutionForest\WorkflowMastery\Core\WorkflowBuilder;
-use SolutionForest\WorkflowMastery\Core\WorkflowState;
+use SolutionForest\WorkflowEngine\Actions\DelayAction;
+use SolutionForest\WorkflowEngine\Actions\LogAction;
+use SolutionForest\WorkflowEngine\Core\WorkflowBuilder;
+use SolutionForest\WorkflowEngine\Core\WorkflowState;
 
 describe('PHP 8.3+ Features', function () {
 
@@ -109,18 +109,18 @@ describe('Simplified Learning Curve', function () {
         expect($steps)->toHaveCount(4);
 
         // Check email step
-        expect($steps[0]->getActionClass())->toBe('SolutionForest\\WorkflowMastery\\Actions\\EmailAction');
+        expect($steps[0]->getActionClass())->toBe('SolutionForest\\WorkflowEngine\\Actions\\EmailAction');
         expect($steps[0]->getConfig()['template'])->toBe('welcome');
 
         // Check delay step
-        expect($steps[1]->getActionClass())->toBe('SolutionForest\\WorkflowMastery\\Actions\\DelayAction');
+        expect($steps[1]->getActionClass())->toBe('SolutionForest\\WorkflowEngine\\Actions\\DelayAction');
 
         // Check HTTP step
-        expect($steps[2]->getActionClass())->toBe('SolutionForest\\WorkflowMastery\\Actions\\HttpAction');
+        expect($steps[2]->getActionClass())->toBe('SolutionForest\\WorkflowEngine\\Actions\\HttpAction');
         expect($steps[2]->getConfig()['method'])->toBe('POST');
 
         // Check condition step
-        expect($steps[3]->getActionClass())->toBe('SolutionForest\\WorkflowMastery\\Actions\\ConditionAction');
+        expect($steps[3]->getActionClass())->toBe('SolutionForest\\WorkflowEngine\\Actions\\ConditionAction');
         expect($steps[3]->getConfig()['condition'])->toBe('user.verified');
     });
 

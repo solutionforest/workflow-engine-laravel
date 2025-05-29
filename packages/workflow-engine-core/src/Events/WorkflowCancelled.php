@@ -1,14 +1,9 @@
 <?php
 
-namespace SolutionForest\WorkflowMastery\Events;
-
-use Illuminate\Foundation\Events\Dispatchable;
-use Illuminate\Queue\SerializesModels;
+namespace SolutionForest\WorkflowEngine\Events;
 
 class WorkflowCancelled
 {
-    use Dispatchable, SerializesModels;
-
     public function __construct(
         public readonly string $workflowId,
         public readonly string $name,

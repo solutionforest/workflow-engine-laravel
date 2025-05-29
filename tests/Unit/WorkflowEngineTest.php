@@ -1,12 +1,12 @@
 <?php
 
 use Illuminate\Support\Facades\Event;
-use SolutionForest\WorkflowMastery\Contracts\StorageAdapter;
-use SolutionForest\WorkflowMastery\Core\WorkflowEngine;
-use SolutionForest\WorkflowMastery\Core\WorkflowInstance;
-use SolutionForest\WorkflowMastery\Core\WorkflowState;
-use SolutionForest\WorkflowMastery\Exceptions\InvalidWorkflowDefinitionException;
-use SolutionForest\WorkflowMastery\Exceptions\WorkflowInstanceNotFoundException;
+use SolutionForest\WorkflowEngine\Contracts\StorageAdapter;
+use SolutionForest\WorkflowEngine\Core\WorkflowEngine;
+use SolutionForest\WorkflowEngine\Core\WorkflowInstance;
+use SolutionForest\WorkflowEngine\Core\WorkflowState;
+use SolutionForest\WorkflowEngine\Exceptions\InvalidWorkflowDefinitionException;
+use SolutionForest\WorkflowEngine\Exceptions\WorkflowInstanceNotFoundException;
 
 beforeEach(function () {
     $this->engine = app(WorkflowEngine::class);

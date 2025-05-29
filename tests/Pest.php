@@ -1,5 +1,5 @@
 <?php
 
-use SolutionForest\WorkflowMastery\Tests\TestCase;
+use SolutionForest\WorkflowEngine\Laravel\Tests\TestCase;
 
 uses(TestCase::class)->in(__DIR__);

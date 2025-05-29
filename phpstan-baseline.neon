@@ -5,21 +5,3 @@ parameters:
 			identifier: larastan.noEnvCallsOutsideOfConfig
 			count: 11
 			path: config/workflow-engine.php
-
-		-
-			message: '#^Called ''env'' outside of the config directory which returns null when the config is cached, use ''config''\.$#'
-			identifier: larastan.noEnvCallsOutsideOfConfig
-			count: 11
-			path: config/workflow-mastery.php
-
-		-
-			message: '#^Match arm comparison between ''\<\='' and ''\<\='' is always true\.$#'
-			identifier: match.alwaysTrue
-			count: 1
-			path: src/Core/Step.php
-
-		-
-			message: '#^Match arm comparison between ''\<\='' and ''\<\='' is always true\.$#'
-			identifier: match.alwaysTrue
-			count: 1
-			path: src/Core/WorkflowDefinition.php

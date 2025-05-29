@@ -1,10 +1,10 @@
 <?php
 
-namespace Tests\Actions\ECommerce;
+namespace SolutionForest\WorkflowEngine\Laravel\Tests\Actions\ECommerce;
 
-use SolutionForest\WorkflowMastery\Contracts\WorkflowAction;
-use SolutionForest\WorkflowMastery\Core\ActionResult;
-use SolutionForest\WorkflowMastery\Core\WorkflowContext;
+use SolutionForest\WorkflowEngine\Contracts\WorkflowAction;
+use SolutionForest\WorkflowEngine\Core\ActionResult;
+use SolutionForest\WorkflowEngine\Core\WorkflowContext;
 
 class ProcessPaymentAction implements WorkflowAction
 {
