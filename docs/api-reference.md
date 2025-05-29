@@ -14,32 +14,29 @@ Creates a new workflow builder instance.
 $builder = WorkflowBuilder::create('my-workflow');
 ```
 
-#### `step(string $id, string $actionClass): self`
+#### `addStep(string $id, string $actionClass, array $config = [], ?int $timeout = null, int $retryAttempts = 0): self`
 
 Adds a custom action step to the workflow.
 
 ```php
-$builder->step('process-payment', ProcessPaymentAction::class);
+$builder->addStep('process-payment', ProcessPaymentAction::class);
+$builder->addStep('process-payment', ProcessPaymentAction::class, ['currency' => 'USD'], 30, 3);
 ```
 
-#### `email(string $template, array $options = []): self`
+#### `email(string $template, string $to, string $subject, array $data = []): self`
 
 Adds an email step to the workflow.
 
 ```php
-$builder->email('welcome-email', [
-    'to' => '{{ user.email }}',
-    'subject' => 'Welcome {{ user.name }}!',
-    'data' => ['welcome_bonus' => 100]
-]);
+$builder->email('welcome-email', '{{ user.email }}', 'Welcome {{ user.name }}!', ['welcome_bonus' => 100]);
 ```
 
-#### `http(string $method, string $url, array $data = []): self`
+#### `http(string $url, string $method = 'GET', array $data = [], array $headers = []): self`
 
 Adds an HTTP request step to the workflow.
 
 ```php
-$builder->http('POST', 'https://api.example.com/webhooks', [
+$builder->http('https://api.example.com/webhooks', 'POST', [
     'event' => 'user_registered',
     'user_id' => '{{ user.id }}'
 ]);
@@ -61,26 +58,24 @@ Adds conditional logic to the workflow.
 
 ```php
 $builder->when('user.age >= 18', function($builder) {
-    $builder->step('verify-identity', VerifyIdentityAction::class);
+    $builder->addStep('verify-identity', VerifyIdentityAction::class);
 });
 ```
 
-#### `retry(int $attempts, string $backoff = 'linear'): self`
+#### `startWith(string $actionClass, array $config = [], ?int $timeout = null, int $retryAttempts = 0): self`
 
-Configures retry behavior for the previous step.
+Adds the first step in a workflow (syntactic sugar for better readability).
 
 ```php
-$builder->step('api-call', ApiCallAction::class)
-    ->retry(attempts: 3, backoff: 'exponential');
+$builder->startWith(ValidateInputAction::class, ['strict' => true]);
 ```
 
-#### `timeout(int $seconds = null, int $minutes = null, int $hours = null): self`
+#### `then(string $actionClass, array $config = [], ?int $timeout = null, int $retryAttempts = 0): self`
 
-Sets a timeout for the previous step.
+Adds a sequential step (syntactic sugar for better readability).
 
 ```php
-$builder->step('long-operation', LongOperationAction::class)
-    ->timeout(minutes: 5);
+$builder->then(ProcessDataAction::class)->then(SaveResultAction::class);
 ```
 
 #### `build(): WorkflowDefinition`

@@ -53,10 +53,10 @@ use App\Actions\CreateUserProfileAction;
 
 // Create the workflow
 $registrationWorkflow = WorkflowBuilder::create('user-registration')
-    ->step('create-profile', CreateUserProfileAction::class)
-    ->email('welcome-email', to: '{{ user.email }}', subject: 'Welcome!')
+    ->addStep('create-profile', CreateUserProfileAction::class)
+    ->email('welcome-email', '{{ user.email }}', 'Welcome!')
     ->delay(hours: 24)
-    ->email('tips-email', to: '{{ user.email }}', subject: 'Getting Started Tips')
+    ->email('tips-email', '{{ user.email }}', 'Getting Started Tips')
     ->build();
 
 // Start the workflow
@@ -155,9 +155,7 @@ The workflow engine automatically handles errors and provides retry mechanisms:
 
 ```php
 $workflow = WorkflowBuilder::create('robust-workflow')
-    ->step('risky-operation', RiskyAction::class)
-        ->retry(attempts: 3, backoff: 'exponential')
-        ->timeout(seconds: 30)
+    ->addStep('risky-operation', RiskyAction::class, [], 30, 3) // timeout: 30s, retry: 3 attempts
     ->build();
 ```
 

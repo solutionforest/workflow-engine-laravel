@@ -8,6 +8,13 @@
 
 Create powerful business workflows with simple, maintainable code.
 
+> ⚠️ **WARNING: DEVELOPMENT STATUS**⚠️ 
+> 
+> This package is currently under active development and is **NOT READY FOR PRODUCTION USE**. 
+> 
+> Features may be incomplete, APIs might change, and there could be breaking changes. Use at your own risk in development environments only.
+
+
 ## ✨ Why Choose This Workflow Engine?
 
 - 🎨 **Simple & Intuitive** - Array-based workflow definitions and fluent WorkflowBuilder API

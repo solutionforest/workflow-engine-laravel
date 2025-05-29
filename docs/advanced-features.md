@@ -131,10 +131,8 @@ Configure automatic retries for unreliable operations:
 
 ```php
 $workflow = WorkflowBuilder::create('robust-workflow')
-    ->step('api-call', ApiCallAction::class)
-        ->retry(attempts: 3, backoff: 'exponential')
-    ->step('database-operation', DatabaseAction::class)
-        ->retry(attempts: 5, backoff: 'linear')
+    ->addStep('api-call', ApiCallAction::class, [], null, 3) // 3 retry attempts
+    ->addStep('database-operation', DatabaseAction::class, [], null, 5) // 5 retry attempts  
     ->build();
 ```
 
@@ -147,7 +145,7 @@ $workflow = WorkflowBuilder::create('robust-workflow')
 ```php
 // Custom backoff function
 $workflow = WorkflowBuilder::create('custom-retry')
-    ->step('operation', MyAction::class)
+    ->addStep('operation', MyAction::class, [], null, 3) // Basic retry with 3 attempts
         ->retry(attempts: 3, backoff: function($attempt) {
             return $attempt * 1000; // 1s, 2s, 3s
         })
