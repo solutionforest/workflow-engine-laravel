@@ -6,15 +6,15 @@
 
 **A modern, type-safe workflow engine for Laravel built with PHP 8.3+ features**
 
-Create powerful business workflows with a beautiful, fluent API. Turn complex processes into simple, maintainable code.
+Create powerful business workflows with simple, maintainable code.
 
 ## ✨ Why Choose This Workflow Engine?
 
-- 🎨 **Beautiful Fluent API** - Write workflows that read like documentation
-- 🔒 **Type Safety First** - Built with readonly properties, enums, and strong typing
-- ⚡ **Lightning Fast** - Modern PHP 8.3+ features for optimal performance
-- 🧩 **Laravel Native** - Seamless integration with Laravel's ecosystem
-- 📚 **Easy to Learn** - 70% less code than traditional workflow engines
+- 🎨 **Simple & Intuitive** - Array-based workflow definitions that are easy to understand
+- 🔒 **Type Safety First** - Built with enums, strong typing, and modern PHP features
+- ⚡ **Laravel Native** - Seamless integration with Laravel's ecosystem and helpers
+- 🧩 **Extensible** - Easy to extend with custom actions and storage adapters
+- 📚 **Well Tested** - Comprehensive test suite with real-world examples
 
 ---
 
@@ -24,35 +24,62 @@ Create powerful business workflows with a beautiful, fluent API. Turn complex pr
 
 ```bash
 composer require solution-forest/workflow-engine-laravel
+```
+
+Optionally publish the config file:
+
+```bash
 php artisan vendor:publish --tag="workflow-engine-config"
+```
+
+For database storage, run the migrations:
+
+```bash
 php artisan migrate
 ```
+
+The migration will create a `workflow_instances` table to store workflow state and progress.
 
 ### Your First Workflow in 30 Seconds
 
 ```php
-use SolutionForest\WorkflowEngine\Core\WorkflowBuilder;
-use SolutionForest\WorkflowEngine\Support\SimpleWorkflow;
+use SolutionForest\WorkflowEngine\Core\WorkflowEngine;
 
-// Create a complete user onboarding workflow in one line
-$workflow = SimpleWorkflow::quick()
-    ->email('welcome@company.com', 'Welcome!')
-    ->delay(days: 1)
-    ->email('tips@company.com', 'Getting Started Tips')
-    ->build();
+// Create a simple workflow definition
+$definition = [
+    'name' => 'User Onboarding',
+    'version' => '1.0',
+    'steps' => [
+        [
+            'id' => 'welcome',
+            'name' => 'Send Welcome',
+            'action' => 'log',
+            'parameters' => [
+                'message' => 'Welcome {{ user.name }}!',
+                'level' => 'info'
+            ]
+        ],
+        [
+            'id' => 'setup',
+            'name' => 'Setup Account', 
+            'action' => 'log',
+            'parameters' => [
+                'message' => 'Setting up account for {{ user.email }}',
+                'level' => 'info'
+            ]
+        ]
+    ]
+];
 
-// Or build custom workflows with our fluent API
-$workflow = WorkflowBuilder::create('order-processing')
-    ->email('order-confirmation', to: '{{ customer.email }}')
-    ->http('POST', 'https://api.payment.com/charge', ['amount' => '{{ order.total }}'])
-    ->delay(minutes: 5)
-    ->when('payment.successful', fn($builder) => 
-        $builder->email('shipping-notification', to: '{{ customer.email }}')
-    )
-    ->build();
+// Start the workflow using the engine
+$workflowId = workflow()->start('user-onboarding-001', $definition, [
+    'user' => ['name' => 'John Doe', 'email' => 'john@example.com']
+]);
 
-// Start the workflow
-$instance = $workflow->start(['customer' => $customer, 'order' => $order]);
+// Or use the helper functions
+$workflowId = start_workflow('user-onboarding-002', $definition, [
+    'user' => ['name' => 'Jane Doe', 'email' => 'jane@example.com']
+]);
 ```
 
 ## 💼 Real-World Examples
@@ -60,38 +87,194 @@ $instance = $workflow->start(['customer' => $customer, 'order' => $order]);
 ### E-commerce Order Processing
 
 ```php
-use SolutionForest\WorkflowEngine\Core\WorkflowBuilder;
+$definition = [
+    'name' => 'Order Processing',
+    'version' => '1.0',
+    'steps' => [
+        [
+            'id' => 'validate-order',
+            'name' => 'Validate Order',
+            'action' => 'log',
+            'parameters' => [
+                'message' => 'Validating order {{ order.id }}',
+                'level' => 'info'
+            ]
+        ],
+        [
+            'id' => 'process-payment',
+            'name' => 'Process Payment',
+            'action' => 'log',
+            'parameters' => [
+                'message' => 'Processing payment for {{ order.total }}',
+                'level' => 'info'
+            ]
+        ],
+        [
+            'id' => 'fulfill-order',
+            'name' => 'Fulfill Order',
+            'action' => 'log',
+            'parameters' => [
+                'message' => 'Order {{ order.id }} fulfilled',
+                'level' => 'info'
+            ]
+        ]
+    ]
+];
 
-$workflow = WorkflowBuilder::create('order-processing')
-    ->step('validate-order', ValidateOrderAction::class)
-    ->step('check-inventory', CheckInventoryAction::class)
-    ->step('process-payment', ProcessPaymentAction::class)
-    ->step('create-shipment', CreateShipmentAction::class)
-    ->email('order-complete', to: '{{ customer.email }}')
-    ->build();
+$workflowId = start_workflow('order-001', $definition, [
+    'order' => ['id' => 'ORD-001', 'total' => 99.99]
+]);
 ```
 
 ### Document Approval Process
 
 ```php
-$workflow = WorkflowBuilder::create('document-approval')
-    ->step('submit', SubmitDocumentAction::class)
-    ->step('manager-review', ManagerReviewAction::class)
-        ->timeout(days: 2)
-    ->step('final-approval', FinalApprovalAction::class)
-    ->email('approval-complete', to: '{{ submitter.email }}')
-    ->build();
+$definition = [
+    'name' => 'Document Approval',
+    'version' => '1.0',
+    'steps' => [
+        [
+            'id' => 'submit',
+            'name' => 'Submit Document',
+            'action' => 'log',
+            'parameters' => [
+                'message' => 'Document {{ document.id }} submitted by {{ user.name }}',
+                'level' => 'info'
+            ]
+        ],
+        [
+            'id' => 'review',
+            'name' => 'Manager Review',
+            'action' => 'log',
+            'parameters' => [
+                'message' => 'Document {{ document.id }} under review',
+                'level' => 'info'
+            ]
+        ],
+        [
+            'id' => 'approve',
+            'name' => 'Final Approval',
+            'action' => 'log',
+            'parameters' => [
+                'message' => 'Document {{ document.id }} approved',
+                'level' => 'info'
+            ]
+        ]
+    ]
+];
+
+$workflowId = start_workflow('doc-approval-001', $definition, [
+    'document' => ['id' => 'DOC-001'],
+    'user' => ['name' => 'John Doe']
+]);
 ```
 
 ### User Onboarding
 
 ```php
-$workflow = SimpleWorkflow::sequential([
-    'send-welcome-email',
-    'schedule-followup',
-    'assign-to-team',
-    'complete-onboarding'
-])->build();
+$definition = [
+    'name' => 'User Onboarding',
+    'version' => '1.0',
+    'steps' => [
+        [
+            'id' => 'welcome',
+            'name' => 'Send Welcome Message',
+            'action' => 'log',
+            'parameters' => [
+                'message' => 'Welcome {{ user.name }}! Starting onboarding...',
+                'level' => 'info'
+            ]
+        ],
+        [
+            'id' => 'setup-profile',
+            'name' => 'Setup User Profile',
+            'action' => 'log',
+            'parameters' => [
+                'message' => 'Setting up profile for {{ user.email }}',
+                'level' => 'info'
+            ]
+        ],
+        [
+            'id' => 'complete',
+            'name' => 'Complete Onboarding',
+            'action' => 'log',
+            'parameters' => [
+                'message' => 'Onboarding complete for {{ user.name }}',
+                'level' => 'info'
+            ]
+        ]
+    ]
+];
+
+$workflowId = start_workflow('onboarding-001', $definition, [
+    'user' => ['name' => 'Jane Doe', 'email' => 'jane@example.com']
+]);
+```
+
+### Creating Custom Actions
+
+```php
+<?php
+
+namespace App\Actions;
+
+use SolutionForest\WorkflowEngine\Contracts\WorkflowAction;
+use SolutionForest\WorkflowEngine\Core\ActionResult;
+use SolutionForest\WorkflowEngine\Core\WorkflowContext;
+
+class SendEmailAction implements WorkflowAction
+{
+    private array $config;
+    
+    public function __construct(array $config = [])
+    {
+        $this->config = $config;
+    }
+    
+    public function execute(WorkflowContext $context): ActionResult
+    {
+        $to = $this->config['to'] ?? 'default@example.com';
+        $subject = $this->config['subject'] ?? 'Notification';
+        
+        // Process template variables
+        $processedTo = $this->processTemplate($to, $context->getData());
+        $processedSubject = $this->processTemplate($subject, $context->getData());
+        
+        // Send email using Laravel's Mail facade
+        Mail::to($processedTo)->send(new WorkflowNotification($processedSubject));
+        
+        return ActionResult::success([
+            'email_sent' => true,
+            'recipient' => $processedTo
+        ]);
+    }
+    
+    private function processTemplate(string $template, array $data): string
+    {
+        return preg_replace_callback('/\{\{\s*([^}]+)\s*\}\}/', function ($matches) use ($data) {
+            $key = trim($matches[1]);
+            return data_get($data, $key, $matches[0]);
+        }, $template);
+    }
+}
+```
+
+Then use it in your workflows:
+
+```php
+$definition = [
+    'name' => 'Email Workflow',
+    'steps' => [
+        [
+            'id' => 'send-email',
+            'action' => SendEmailAction::class,
+            'parameters' => [
+                'to' => '{{ user.email }}',
+                'subject' => 'Welcome {{ user.name }}!'
+            ]
+        ]
+    ]
+];
 ```
 
 ## 🔧 Core Features
@@ -102,71 +285,116 @@ $workflow = SimpleWorkflow::sequential([
 use SolutionForest\WorkflowEngine\Core\WorkflowState;
 
 // Rich, type-safe workflow states
-$state = WorkflowState::Running;
+$state = WorkflowState::RUNNING;
 echo $state->color();     // 'blue'
 echo $state->icon();      // '▶️'
-echo $state->label();     // 'In Progress'
+echo $state->label();     // 'Running'
 
 // Smart state transitions
-if ($state->canTransitionTo(WorkflowState::Completed)) {
-    $workflow->complete();
+if ($state->canTransitionTo(WorkflowState::COMPLETED)) {
+    workflow()->complete($workflowId);
 }
 ```
 
-### Attribute-Based Configuration
+### Template Processing
 
 ```php
-use SolutionForest\WorkflowEngine\Attributes\WorkflowStep;
-use SolutionForest\WorkflowEngine\Attributes\Timeout;
-use SolutionForest\WorkflowEngine\Attributes\Retry;
+// Use template variables in your workflow steps
+$definition = [
+    'name' => 'User Notification',
+    'steps' => [
+        [
+            'id' => 'notify',
+            'action' => 'log',
+            'parameters' => [
+                'message' => 'Hello {{ user.name }}, your order {{ order.id }} is ready!',
+                'level' => 'info'
+            ]
+        ]
+    ]
+];
 
-class ProcessPaymentAction implements WorkflowAction
-{
-    #[WorkflowStep('process-payment')]
-    #[Timeout(minutes: 5)]
-    #[Retry(attempts: 3, backoff: 'exponential')]
-    public function execute(WorkflowContext $context): ActionResult
-    {
-        // Your payment logic here
-        return ActionResult::success();
-    }
-}
+start_workflow('notification-001', $definition, [
+    'user' => ['name' => 'John'],
+    'order' => ['id' => 'ORD-123']
+]);
 ```
 
-### Smart HTTP Actions
+### Built-in Actions
 
 ```php
-$workflow = WorkflowBuilder::create('api-integration')
-    ->http('POST', 'https://api.example.com/users', [
-        'name' => '{{ user.name }}',
-        'email' => '{{ user.email }}',
-        'role' => '{{ user.role }}'
-    ])
-    ->retry(attempts: 3)
-    ->timeout(seconds: 30)
-    ->build();
+// Log Action - Built-in logging with template support
+[
+    'id' => 'log-step',
+    'action' => 'log',
+    'parameters' => [
+        'message' => 'Processing {{ item.name }}',
+        'level' => 'info'
+    ]
+]
+
+// Delay Action - Built-in delays (for testing/demo)
+[
+    'id' => 'delay-step', 
+    'action' => 'delay',
+    'parameters' => [
+        'seconds' => 2
+    ]
+]
 ```
 
-### Conditional Logic
+### Workflow Management
 
 ```php
-$workflow = WorkflowBuilder::create('conditional-flow')
-    ->when('user.type == "premium"', fn($builder) =>
-        $builder->email('premium-welcome', to: '{{ user.email }}')
-    )
-    ->when('user.age >= 18', fn($builder) =>
-        $builder->step('verify-identity', VerifyIdentityAction::class)
-    )
-    ->build();
+// Start workflows
+$workflowId = start_workflow('my-workflow', $definition, $context);
+
+// Get workflow status
+$instance = get_workflow($workflowId);
+echo $instance->getState()->label(); // Current state
+
+// List all workflows
+$workflows = list_workflows();
+
+// Filter workflows by state
+$runningWorkflows = list_workflows(['state' => WorkflowState::RUNNING]);
+
+// Cancel a workflow
+cancel_workflow($workflowId, 'User requested cancellation');
+```
+
+### Helper Functions
+
+The package provides convenient helper functions for common operations:
+
+```php
+// Get the workflow engine instance
+$engine = workflow();
+
+// Start a workflow
+$workflowId = start_workflow('my-workflow-id', $definition, $context);
+
+// Get a workflow instance  
+$instance = get_workflow('my-workflow-id');
+
+// List all workflows
+$workflows = list_workflows();
+
+// List workflows filtered by state
+$runningWorkflows = list_workflows(['state' => WorkflowState::RUNNING]);
+
+// Cancel a workflow
+cancel_workflow('my-workflow-id', 'User cancelled');
 ```
 
 ## 📖 Documentation
 
 - **[Getting Started Guide](docs/getting-started.md)** - Complete setup and basic usage
-- **[API Reference](docs/api-reference.md)** - Detailed API documentation
+- **[API Reference](docs/api-reference.md)** - Detailed API documentation  
 - **[Advanced Features](docs/advanced-features.md)** - Error handling, timeouts, retries
 - **[Best Practices](docs/best-practices.md)** - Performance tips and patterns
 - **[Migration Guide](docs/migration.md)** - Upgrading from older versions
+- **[Architecture](docs/development/ARCHITECTURE.md)** - Technical implementation details
 
 ## 🧪 Testing
 
