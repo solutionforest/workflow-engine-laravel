@@ -9,7 +9,7 @@ use SolutionForest\WorkflowEngine\Contracts\EventDispatcher;
 
 /**
  * Laravel adapter for the workflow engine event dispatcher.
- * 
+ *
  * This adapter bridges Laravel's event system with the framework-agnostic
  * event dispatcher interface used by the workflow engine core.
  */

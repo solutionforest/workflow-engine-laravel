@@ -9,7 +9,7 @@ use SolutionForest\WorkflowEngine\Contracts\Logger;
 
 /**
  * Laravel adapter for the workflow engine logger.
- * 
+ *
  * This adapter bridges Laravel's logging system with the framework-agnostic
  * logger interface used by the workflow engine core.
  */
