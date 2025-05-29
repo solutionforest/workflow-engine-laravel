@@ -99,6 +99,41 @@ class CreateUserProfileAction implements WorkflowAction
 }
 ```
 
+### Enhanced Actions with Attributes
+
+Use PHP 8.3+ attributes to add configuration directly to your action classes:
+
+```php
+<?php
+
+namespace App\Actions;
+
+use SolutionForest\WorkflowEngine\Attributes\WorkflowStep;
+use SolutionForest\WorkflowEngine\Attributes\Timeout;
+use SolutionForest\WorkflowEngine\Attributes\Retry;
+use SolutionForest\WorkflowEngine\Contracts\WorkflowAction;
+use SolutionForest\WorkflowEngine\Core\WorkflowContext;
+use SolutionForest\WorkflowEngine\Core\ActionResult;
+
+#[WorkflowStep(
+    id: 'create_profile',
+    name: 'Create User Profile',
+    description: 'Creates a new user profile in the database'
+)]
+#[Timeout(seconds: 30)]
+#[Retry(attempts: 3, backoff: 'exponential')]
+class CreateUserProfileAction implements WorkflowAction
+{
+    public function execute(WorkflowContext $context): ActionResult
+    {
+        // Same implementation as above
+        // Now with automatic timeout and retry handling
+    }
+}
+```
+
+See the [Advanced Features](advanced-features.md) guide for more details on attributes.
+
 ## Workflow States
 
 Workflows have built-in states that you can monitor:

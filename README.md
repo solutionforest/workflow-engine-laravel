@@ -10,7 +10,8 @@ Create powerful business workflows with simple, maintainable code.
 
 ## ✨ Why Choose This Workflow Engine?
 
-- 🎨 **Simple & Intuitive** - Array-based workflow definitions that are easy to understand
+- 🎨 **Simple & Intuitive** - Array-based workflow definitions and fluent WorkflowBuilder API
+- 🏷️ **Modern PHP 8.3+ Attributes** - Declarative configuration with #[WorkflowStep], #[Retry], #[Timeout] 
 - 🔒 **Type Safety First** - Built with enums, strong typing, and modern PHP features
 - ⚡ **Laravel Native** - Seamless integration with Laravel's ecosystem and helpers
 - 🧩 **Extensible** - Easy to extend with custom actions and storage adapters
@@ -278,6 +279,77 @@ $definition = [
 ```
 
 ## 🔧 Core Features
+
+### Modern PHP 8.3+ Attributes
+
+Enhance your workflow actions with declarative attributes for configuration:
+
+```php
+<?php
+
+namespace App\Actions;
+
+use SolutionForest\WorkflowEngine\Attributes\WorkflowStep;
+use SolutionForest\WorkflowEngine\Attributes\Timeout;
+use SolutionForest\WorkflowEngine\Attributes\Retry;
+use SolutionForest\WorkflowEngine\Attributes\Condition;
+use SolutionForest\WorkflowEngine\Contracts\WorkflowAction;
+use SolutionForest\WorkflowEngine\Core\ActionResult;
+use SolutionForest\WorkflowEngine\Core\WorkflowContext;
+
+#[WorkflowStep(
+    id: 'send_email',
+    name: 'Send Welcome Email',
+    description: 'Sends a welcome email to new users'
+)]
+#[Timeout(minutes: 5)]
+#[Retry(attempts: 3, backoff: 'exponential')]
+#[Condition('user.email is not null')]
+class SendWelcomeEmailAction implements WorkflowAction
+{
+    public function execute(WorkflowContext $context): ActionResult
+    {
+        $user = $context->getData('user');
+        
+        // Send email logic here
+        Mail::to($user['email'])->send(new WelcomeEmail($user));
+        
+        return ActionResult::success(['email_sent' => true]);
+    }
+}
+```
+
+#### Available Attributes:
+
+- **`#[WorkflowStep]`** - Define step metadata (id, name, description, config)
+- **`#[Timeout]`** - Set execution timeouts (seconds, minutes, hours)  
+- **`#[Retry]`** - Configure retry behavior (attempts, backoff strategy, delays)
+- **`#[Condition]`** - Add conditional execution rules
+
+### WorkflowBuilder Fluent API
+
+Create workflows with an intuitive, chainable API:
+
+```php
+use SolutionForest\WorkflowEngine\Core\WorkflowBuilder;
+
+$workflow = WorkflowBuilder::create('user-onboarding')
+    ->description('Complete user onboarding process')
+    ->addStep('welcome', SendWelcomeEmailAction::class)
+    ->addStep('setup', SetupUserAction::class, ['template' => 'premium'])
+    ->when('user.plan === "premium"', function($builder) {
+        $builder->addStep('premium-setup', PremiumSetupAction::class);
+    })
+    ->email('tips-email', '{{ user.email }}', 'Getting Started Tips')
+    ->delay(hours: 24)
+    ->addStep('complete', CompleteOnboardingAction::class)
+    ->build();
+
+// Start the workflow
+$workflowId = $workflow->start('user-001', [
+    'user' => ['email' => 'john@example.com', 'plan' => 'premium']
+]);
+```
 
 ### Modern PHP 8.3+ Enums
 
