@@ -3,33 +3,21 @@
 namespace SolutionForest\WorkflowEngine\Laravel\Providers;
 
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Support\ServiceProvider;
 use SolutionForest\WorkflowEngine\Contracts\StorageAdapter;
 use SolutionForest\WorkflowEngine\Core\WorkflowEngine;
 use SolutionForest\WorkflowEngine\Laravel\Commands\LaravelWorkflowEngineCommand;
 use SolutionForest\WorkflowEngine\Laravel\Storage\DatabaseStorage;
-use Spatie\LaravelPackageTools\Package;
-use Spatie\LaravelPackageTools\PackageServiceProvider;
 
-class WorkflowEngineServiceProvider extends PackageServiceProvider
+class WorkflowEngineServiceProvider extends ServiceProvider
 {
-    public function configurePackage(Package $package): void
-    {
-        /*
-         * This class is a Package Service Provider
-         *
-         * More info: https://github.com/spatie/laravel-package-tools
-         */
-        $package
-            ->name('workflow-engine')
-            ->hasConfigFile()
-            ->hasViews()
-            ->hasMigration('create_workflow_instances_table')
-            ->hasCommand(LaravelWorkflowEngineCommand::class);
-    }
-
     public function register(): void
     {
-        parent::register();
+        // Merge config
+        $this->mergeConfigFrom(
+            __DIR__.'/../../config/workflow-engine.php',
+            'workflow-engine'
+        );
 
         // Register storage adapter
         $this->app->singleton(StorageAdapter::class, function ($app): StorageAdapter {
@@ -73,6 +61,32 @@ class WorkflowEngineServiceProvider extends PackageServiceProvider
 
     public function boot(): void
     {
-        parent::boot();
+        // Publish config file
+        if ($this->app->runningInConsole()) {
+            $this->publishes([
+                __DIR__.'/../../config/workflow-engine.php' => config_path('workflow-engine.php'),
+            ], 'workflow-engine-config');
+        }
+
+        // Publish migrations
+        if ($this->app->runningInConsole()) {
+            $this->publishes([
+                __DIR__.'/../../database/migrations/create_workflow_instances_table.php.stub' => database_path('migrations/'.date('Y_m_d_His', time()).'_create_workflow_instances_table.php'),
+            ], 'workflow-engine-migrations');
+        }
+
+        // Publish views
+        if ($this->app->runningInConsole()) {
+            $this->publishes([
+                __DIR__.'/../../resources/views' => resource_path('views/vendor/workflow-engine'),
+            ], 'workflow-engine-views');
+        }
+
+        // Register commands
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                LaravelWorkflowEngineCommand::class,
+            ]);
+        }
     }
 }
