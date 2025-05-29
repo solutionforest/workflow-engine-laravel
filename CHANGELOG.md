@@ -2,6 +2,10 @@
 
 All notable changes to `workflow-engine-laravel` will be documented in this file.
 
+## v0.0.2-alpha - 2025-05-29
+
+**Full Changelog**: https://github.com/solutionforest/workflow-engine-laravel/compare/v0.0.1-alpha...v0.0.2-alpha
+
 ## v0.0.1-alpha - 2025-05-29
 
 ### What's Changed
