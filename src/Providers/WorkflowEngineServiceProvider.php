@@ -21,7 +21,7 @@ class WorkflowEngineServiceProvider extends PackageServiceProvider
          */
         $package
             ->name('workflow-engine')
-            ->hasConfigFile('workflow-engine')
+            ->hasConfigFile()
             ->hasViews()
             ->hasMigration('create_workflow_instances_table')
             ->hasCommand(LaravelWorkflowEngineCommand::class);
