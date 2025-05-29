@@ -2,8 +2,8 @@
 
 namespace Tests\Support;
 
-use SolutionForest\WorkflowMastery\Contracts\StorageAdapter;
-use SolutionForest\WorkflowMastery\Core\WorkflowInstance;
+use SolutionForest\WorkflowEngine\Contracts\StorageAdapter;
+use SolutionForest\WorkflowEngine\Core\WorkflowInstance;
 
 class InMemoryStorage implements StorageAdapter
 {

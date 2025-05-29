@@ -1,7 +1,7 @@
 <?php
 
-use SolutionForest\WorkflowMastery\Core\WorkflowEngine;
-use SolutionForest\WorkflowMastery\Core\WorkflowState;
+use SolutionForest\WorkflowEngine\Core\WorkflowEngine;
+use SolutionForest\WorkflowEngine\Core\WorkflowState;
 
 beforeEach(function () {
     $this->engine = app(WorkflowEngine::class);

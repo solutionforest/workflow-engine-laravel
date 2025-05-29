@@ -2,11 +2,10 @@
 
 namespace SolutionForest\WorkflowEngine\Laravel\Providers;
 
-use Illuminate\Contracts\Events\Dispatcher as EventDispatcher;
 use Illuminate\Database\DatabaseManager;
-use SolutionForest\WorkflowEngine\Laravel\Commands\LaravelWorkflowEngineCommand;
 use SolutionForest\WorkflowEngine\Contracts\StorageAdapter;
 use SolutionForest\WorkflowEngine\Core\WorkflowEngine;
+use SolutionForest\WorkflowEngine\Laravel\Commands\LaravelWorkflowEngineCommand;
 use SolutionForest\WorkflowEngine\Laravel\Storage\DatabaseStorage;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
@@ -45,11 +44,25 @@ class WorkflowEngineServiceProvider extends PackageServiceProvider
             };
         });
 
+        // Register event dispatcher adapter
+        $this->app->singleton(\SolutionForest\WorkflowEngine\Contracts\EventDispatcher::class, function ($app) {
+            return new \SolutionForest\WorkflowEngine\Laravel\Adapters\LaravelEventDispatcher(
+                $app->make(\Illuminate\Contracts\Events\Dispatcher::class)
+            );
+        });
+
+        // Register logger adapter
+        $this->app->singleton(\SolutionForest\WorkflowEngine\Contracts\Logger::class, function ($app) {
+            return new \SolutionForest\WorkflowEngine\Laravel\Adapters\LaravelLogger(
+                $app->make(\Illuminate\Log\LogManager::class)
+            );
+        });
+
         // Register workflow engine
         $this->app->singleton(WorkflowEngine::class, function ($app): WorkflowEngine {
             return new WorkflowEngine(
                 $app->make(StorageAdapter::class),
-                $app->make(EventDispatcher::class)
+                $app->make(\SolutionForest\WorkflowEngine\Contracts\EventDispatcher::class)
             );
         });
 
