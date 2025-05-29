@@ -1,3 +1,3 @@
 # Changelog
 
-All notable changes to `workflow-mastery` will be documented in this file.
+All notable changes to `workflow-engine-laravel` will be documented in this file.

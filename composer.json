@@ -12,7 +12,7 @@
         "state-machine",
         "laravel-package"
     ],
-    "homepage": "https://github.com/solution-forest/workflow-engine-laravel",
+    "homepage": "https://github.com/solutionforest/workflow-engine-laravel",
     "license": "MIT",
     "authors": [
         {
@@ -23,12 +23,12 @@
     ],
     "require": {
         "php": "^8.3",
-        "solution-forest/workflow-engine-core": "*",
-        "spatie/laravel-package-tools": "^1.16",
         "illuminate/contracts": "^10.0||^11.0||^12.0",
-        "illuminate/support": "^10.0||^11.0||^12.0",
         "illuminate/database": "^10.0||^11.0||^12.0",
-        "illuminate/events": "^10.0||^11.0||^12.0"
+        "illuminate/events": "^10.0||^11.0||^12.0",
+        "illuminate/support": "^10.0||^11.0||^12.0",
+        "solution-forest/workflow-engine-core": "dev-main",
+        "spatie/laravel-package-tools": "^1.16"
     },
      "conflict": {
         "laravel/framework": "<11.0.0"
@@ -60,12 +60,6 @@
             "Workbench\\App\\": "workbench/app/"
         }
     },
-    "repositories": [
-        {
-            "type": "path",
-            "url": "./packages/workflow-engine-core"
-        }
-    ],
     "scripts": {
         "post-autoload-dump": "@composer run prepare",
         "prepare": "@php vendor/bin/testbench package:discover --ansi",
@@ -92,5 +86,5 @@
         }
     },
     "minimum-stability": "dev",
-    "prefer-stable": true
+    "prefer-stable": false
 }

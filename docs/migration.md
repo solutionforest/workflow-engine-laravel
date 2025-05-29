@@ -16,7 +16,7 @@ This guide helps you migrate from the array-based workflow configuration to the 
 #### 1. Update Composer Dependencies
 
 ```bash
-composer update solution-forest/laravel-workflow-engine
+composer update solution-forest/workflow-engine-laravel
 ```
 
 #### 2. Publish New Configuration
@@ -376,5 +376,5 @@ If you encounter issues during migration:
 
 1. Check the [troubleshooting guide](troubleshooting.md)
 2. Review the [examples](../src/Examples/ModernWorkflowExamples.php)
-3. Open an issue on [GitHub](https://github.com/solution-forest/laravel-workflow-engine/issues)
+3. Open an issue on [GitHub](https://github.com/solutionforest/workflow-engine-laravel/issues)
 4. Join our [Discord community](https://discord.gg/workflow-engine)

@@ -25,7 +25,7 @@ For contributors and those interested in the internals:
 
 ## Quick Links
 
-- [GitHub Repository](https://github.com/solution-forest/laravel-workflow-engine)
-- [Packagist Package](https://packagist.org/packages/solution-forest/laravel-workflow-engine)
-- [Issue Tracker](https://github.com/solution-forest/laravel-workflow-engine/issues)
+- [GitHub Repository](https://github.com/solutionforest/workflow-engine-laravel)
+- [Packagist Package](https://packagist.org/packages/solution-forest/workflow-engine-laravel)
+- [Issue Tracker](https://github.com/solutionforest/workflow-engine-laravel/issues)
 - [Contributing Guidelines](../CONTRIBUTING.md)

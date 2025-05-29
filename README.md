@@ -1,8 +1,8 @@
 # Laravel Workflow Engine
 
-[![Latest Version on Packagist](https://img.shields.io/packagist/v/solution-forest/laravel-workflow-engine.svg?style=flat-square)](https://packagist.org/packages/solution-forest/laravel-workflow-engine)
-[![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/solution-forest/laravel-workflow-engine/run-tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/solution-forest/laravel-workflow-engine/actions?query=workflow%3Arun-tests+branch%3Amain)
-[![Total Downloads](https://img.shields.io/packagist/dt/solution-forest/laravel-workflow-engine.svg?style=flat-square)](https://packagist.org/packages/solution-forest/laravel-workflow-engine)
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/solution-forest/workflow-engine-laravel.svg?style=flat-square)](https://packagist.org/packages/solution-forest/workflow-engine-laravel)
+[![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/solutionforest/workflow-engine-laravel/run-tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/solutionforest/workflow-engine-laravel/actions?query=workflow%3Arun-tests+branch%3Amain)
+[![Total Downloads](https://img.shields.io/packagist/dt/solution-forest/workflow-engine-laravel.svg?style=flat-square)](https://packagist.org/packages/solution-forest/workflow-engine-laravel)
 
 **A modern, type-safe workflow engine for Laravel built with PHP 8.3+ features**
 
@@ -23,7 +23,7 @@ Create powerful business workflows with a beautiful, fluent API. Turn complex pr
 ### Installation
 
 ```bash
-composer require solution-forest/laravel-workflow-engine
+composer require solution-forest/workflow-engine-laravel
 php artisan vendor:publish --tag="workflow-engine-config"
 php artisan migrate
 ```

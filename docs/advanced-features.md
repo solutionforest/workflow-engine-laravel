@@ -265,19 +265,19 @@ Listen to workflow events:
 
 ```php
 use SolutionForest\WorkflowEngine\Events\WorkflowStarted;
-use SolutionForest\WorkflowEngine\Events\WorkflowCompleted;
-use SolutionForest\WorkflowEngine\Events\WorkflowFailed;
+use SolutionForest\WorkflowEngine\Events\WorkflowCompletedEvent;
+use SolutionForest\WorkflowEngine\Events\WorkflowFailedEvent;
 
 // In your EventServiceProvider
 protected $listen = [
     WorkflowStarted::class => [
         LogWorkflowStarted::class,
     ],
-    WorkflowCompleted::class => [
+    WorkflowCompletedEvent::class => [
         LogWorkflowCompleted::class,
         SendCompletionNotification::class,
     ],
-    WorkflowFailed::class => [
+    WorkflowFailedEvent::class => [
         LogWorkflowFailure::class,
         AlertAdministrators::class,
     ],
