@@ -27,7 +27,7 @@
         "illuminate/database": "^10.0||^11.0||^12.0",
         "illuminate/events": "^10.0||^11.0||^12.0",
         "illuminate/support": "^10.0||^11.0||^12.0",
-        "solution-forest/workflow-engine-core": "dev-main",
+        "solution-forest/workflow-engine-core": "^0.0.1-alpha",
         "spatie/laravel-package-tools": "^1.16"
     },
      "conflict": {
@@ -86,5 +86,5 @@
         }
     },
     "minimum-stability": "dev",
-    "prefer-stable": false
+    "prefer-stable": true
 }
