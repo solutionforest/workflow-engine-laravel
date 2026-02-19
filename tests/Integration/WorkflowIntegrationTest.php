@@ -1,5 +1,6 @@
 <?php
 
+use SolutionForest\WorkflowEngine\Contracts\StorageAdapter;
 use SolutionForest\WorkflowEngine\Core\WorkflowState;
 
 test('it can execute a complete workflow', function () {
@@ -105,6 +106,7 @@ test('it can handle workflow cancellation', function () {
 
     // Start workflow
     $workflowId = start_workflow('cancellable-workflow', $definition);
+    app(StorageAdapter::class)->updateState($workflowId, ['state' => WorkflowState::RUNNING->value]);
 
     // Cancel workflow
     cancel_workflow($workflowId, 'User requested cancellation');
@@ -134,22 +136,23 @@ test('it can list and filter workflows', function () {
     $workflow2Id = start_workflow('list-test-2', $definition2);
 
     // Cancel one
+    app(StorageAdapter::class)->updateState($workflow2Id, ['state' => WorkflowState::RUNNING->value]);
     cancel_workflow($workflow2Id);
 
     // List all workflows
-    $allWorkflows = workflow()->listWorkflows();
+    $allWorkflows = workflow()->getInstances();
     expect(count($allWorkflows))->toBeGreaterThanOrEqual(2);
 
     // Filter by state
-    $completedWorkflows = workflow()->listWorkflows(['state' => WorkflowState::COMPLETED]);
-    $cancelledWorkflows = workflow()->listWorkflows(['state' => WorkflowState::CANCELLED]);
+    $completedWorkflows = workflow()->getInstances(['state' => WorkflowState::COMPLETED]);
+    $cancelledWorkflows = workflow()->getInstances(['state' => WorkflowState::CANCELLED]);
 
     expect(count($completedWorkflows))->toBeGreaterThanOrEqual(1);
     expect(count($cancelledWorkflows))->toBeGreaterThanOrEqual(1);
 
     // Verify specific workflows exist in filtered results
-    $completedIds = array_column($completedWorkflows, 'workflow_id');
-    $cancelledIds = array_column($cancelledWorkflows, 'workflow_id');
+    $completedIds = array_map(fn ($workflow) => $workflow->getId(), $completedWorkflows);
+    $cancelledIds = array_map(fn ($workflow) => $workflow->getId(), $cancelledWorkflows);
 
     expect($completedIds)->toContain($workflow1Id);
     expect($cancelledIds)->toContain($workflow2Id);

@@ -51,6 +51,6 @@ if (! function_exists('list_workflows')) {
      */
     function list_workflows(array $filters = []): array
     {
-        return workflow()->listWorkflows($filters);
+        return workflow()->getInstances($filters);
     }
 }

@@ -1,6 +1,8 @@
 <?php
 
+use SolutionForest\WorkflowEngine\Contracts\StorageAdapter;
 use SolutionForest\WorkflowEngine\Core\WorkflowEngine;
+use SolutionForest\WorkflowEngine\Core\WorkflowState;
 
 test('workflow helper returns engine instance', function () {
     $engine = workflow();
@@ -61,6 +63,7 @@ test('cancel workflow helper works', function () {
     ];
 
     $workflowId = start_workflow('helper-test-cancel', $definition);
+    app(StorageAdapter::class)->updateState($workflowId, ['state' => WorkflowState::RUNNING->value]);
     cancel_workflow($workflowId, 'Test cancellation');
 
     $instance = get_workflow($workflowId);

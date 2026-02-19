@@ -30,7 +30,7 @@ test('it can start a workflow', function () {
     expect($workflowId)->not->toBeEmpty();
 
     // Verify the workflow instance was created
-    $instance = $this->engine->getWorkflow($workflowId);
+    $instance = $this->engine->getInstance($workflowId);
     expect($instance)->toBeInstanceOf(WorkflowInstance::class);
     expect($instance->getState())->toBe(WorkflowState::COMPLETED); // Log action completes immediately
     expect($instance->getName())->toBe('Test Workflow');
@@ -54,7 +54,7 @@ test('it can start a workflow with context', function () {
     $context = ['name' => 'John'];
     $workflowId = $this->engine->start('test-workflow', $definition, $context);
 
-    $instance = $this->engine->getWorkflow($workflowId);
+    $instance = $this->engine->getInstance($workflowId);
     $workflowData = $instance->getContext()->getData();
 
     // Should contain original context plus any data added by actions
@@ -89,14 +89,12 @@ test('it can resume a paused workflow', function () {
 
     // Manually pause it
     $storage = app(StorageAdapter::class);
-    $instance = $storage->load($workflowId);
-    $instance->setState(WorkflowState::PAUSED);
-    $storage->save($instance);
+    $storage->updateState($workflowId, ['state' => WorkflowState::PAUSED->value]);
 
     // Resume it
     $this->engine->resume($workflowId);
 
-    $instance = $this->engine->getWorkflow($workflowId);
+    $instance = $this->engine->getInstance($workflowId);
     // After resume, it should be completed since we have simple log actions
     expect($instance->getState())->toBe(WorkflowState::COMPLETED);
 });
@@ -115,9 +113,10 @@ test('it can cancel a workflow', function () {
     ];
 
     $workflowId = $this->engine->start('test-workflow', $definition);
+    app(StorageAdapter::class)->updateState($workflowId, ['state' => WorkflowState::RUNNING->value]);
     $this->engine->cancel($workflowId, 'User cancelled');
 
-    $instance = $this->engine->getWorkflow($workflowId);
+    $instance = $this->engine->getInstance($workflowId);
     expect($instance->getState())->toBe(WorkflowState::CANCELLED);
 });
 
@@ -153,7 +152,7 @@ test('it throws exception for invalid workflow definition', function () {
 })->throws(InvalidWorkflowDefinitionException::class, 'Required field \'name\' is missing from workflow definition');
 
 test('it throws exception for nonexistent workflow', function () {
-    $this->engine->getWorkflow('nonexistent');
+    $this->engine->getInstance('nonexistent');
 })->throws(WorkflowInstanceNotFoundException::class, 'Workflow instance \'nonexistent\' was not found');
 
 test('it can list workflows', function () {
@@ -172,11 +171,11 @@ test('it can list workflows', function () {
     $workflowId1 = $this->engine->start('test-workflow-1', $definition);
     $workflowId2 = $this->engine->start('test-workflow-2', $definition);
 
-    $workflows = $this->engine->listWorkflows();
+    $workflows = $this->engine->getInstances();
 
     expect($workflows)->toHaveCount(2);
-    expect(array_column($workflows, 'workflow_id'))->toContain($workflowId1);
-    expect(array_column($workflows, 'workflow_id'))->toContain($workflowId2);
+    expect(array_map(fn (WorkflowInstance $workflow): string => $workflow->getId(), $workflows))->toContain($workflowId1);
+    expect(array_map(fn (WorkflowInstance $workflow): string => $workflow->getId(), $workflows))->toContain($workflowId2);
 });
 
 test('it can filter workflows by state', function () {
@@ -195,13 +194,14 @@ test('it can filter workflows by state', function () {
     $completedId = $this->engine->start('completed-workflow', $definition);
     $cancelledId = $this->engine->start('cancelled-workflow', $definition);
 
+    app(StorageAdapter::class)->updateState($cancelledId, ['state' => WorkflowState::RUNNING->value]);
     $this->engine->cancel($cancelledId);
 
-    $completedWorkflows = $this->engine->listWorkflows(['state' => WorkflowState::COMPLETED]);
-    $cancelledWorkflows = $this->engine->listWorkflows(['state' => WorkflowState::CANCELLED]);
+    $completedWorkflows = $this->engine->getInstances(['state' => WorkflowState::COMPLETED]);
+    $cancelledWorkflows = $this->engine->getInstances(['state' => WorkflowState::CANCELLED]);
 
     expect($completedWorkflows)->toHaveCount(1);
     expect($cancelledWorkflows)->toHaveCount(1);
-    expect($completedWorkflows[0]['workflow_id'])->toBe($completedId);
-    expect($cancelledWorkflows[0]['workflow_id'])->toBe($cancelledId);
+    expect($completedWorkflows[0]->getId())->toBe($completedId);
+    expect($cancelledWorkflows[0]->getId())->toBe($cancelledId);
 });
