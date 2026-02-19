@@ -74,7 +74,7 @@ class UnreliableApiAction implements WorkflowAction
 
 Available backoff strategies:
 - `linear` - Fixed delay between retries
-- `exponential` - Exponentially increasing delay  
+- `exponential` - Exponentially increasing delay
 - `fixed` - Same delay for all retries
 
 ### Condition Attribute
@@ -99,7 +99,7 @@ class ConditionalAction implements WorkflowAction
 
 Condition expressions support:
 - Property access: `user.email`, `order.amount`
-- Comparisons: `>`, `<`, `>=`, `<=`, `=`, `!=`
+- Comparisons: `>`, `<`, `>=`, `<=`, `===`, `!==`, `==`, `!=`
 - Null checks: `is null`, `is not null`
 - Operators: `and`, `or`
 
@@ -125,30 +125,15 @@ class ProcessPaymentAction implements WorkflowAction
 
 ## Error Handling and Retries
 
-### Automatic Retries
+### Configuring Retries via Builder
 
-Configure automatic retries for unreliable operations:
+Configure automatic retries when adding steps to the workflow:
 
 ```php
 $workflow = WorkflowBuilder::create('robust-workflow')
-    ->addStep('api-call', ApiCallAction::class, [], null, 3) // 3 retry attempts
-    ->addStep('database-operation', DatabaseAction::class, [], null, 5) // 5 retry attempts  
-    ->build();
-```
-
-### Backoff Strategies
-
-- **Linear**: Fixed delay between retries
-- **Exponential**: Increasing delay (1s, 2s, 4s, 8s...)
-- **Custom**: Define your own backoff function
-
-```php
-// Custom backoff function
-$workflow = WorkflowBuilder::create('custom-retry')
-    ->addStep('operation', MyAction::class, [], null, 3) // Basic retry with 3 attempts
-        ->retry(attempts: 3, backoff: function($attempt) {
-            return $attempt * 1000; // 1s, 2s, 3s
-        })
+    ->addStep('api-call', ApiCallAction::class, [], null, 3)        // 3 retry attempts
+    ->addStep('database-op', DatabaseAction::class, [], null, 5)    // 5 retry attempts
+    ->addStep('quick-task', QuickAction::class, [], '30s', 2)       // 30s timeout, 2 retries
     ->build();
 ```
 
@@ -165,14 +150,26 @@ class ProcessPaymentAction implements WorkflowAction
             $payment = $this->chargeCard($context->getData('payment'));
             return ActionResult::success(['payment_id' => $payment->id]);
         } catch (PaymentException $e) {
-            // Trigger compensation workflow
-            CompensationWorkflow::start([
-                'original_context' => $context,
-                'error' => $e->getMessage()
+            return ActionResult::failure('Payment failed: ' . $e->getMessage(), [
+                'error_type' => 'payment_failure',
+                'original_error' => $e->getMessage()
             ]);
-            
-            return ActionResult::failure('Payment failed: ' . $e->getMessage());
         }
+    }
+
+    public function canExecute(WorkflowContext $context): bool
+    {
+        return $context->hasData('payment');
+    }
+
+    public function getName(): string
+    {
+        return 'Process Payment';
+    }
+
+    public function getDescription(): string
+    {
+        return 'Processes customer payment via configured gateway';
     }
 }
 ```
@@ -181,32 +178,21 @@ class ProcessPaymentAction implements WorkflowAction
 
 ### Step-Level Timeouts
 
-Set timeouts for individual steps:
+Set timeouts for individual steps using the builder:
 
 ```php
 $workflow = WorkflowBuilder::create('timed-workflow')
-    ->step('quick-operation', QuickAction::class)
-        ->timeout(seconds: 30)
-    ->step('slow-operation', SlowAction::class)
-        ->timeout(minutes: 5)
+    ->addStep('quick-operation', QuickAction::class, timeout: 30)      // 30 seconds
+    ->addStep('slow-operation', SlowAction::class, timeout: '5m')      // 5 minutes
+    ->addStep('long-task', LongTaskAction::class, timeout: '2h')       // 2 hours
     ->build();
 ```
 
-### Workflow-Level Timeouts
-
-Set a timeout for the entire workflow:
-
-```php
-$workflow = WorkflowBuilder::create('deadline-workflow')
-    ->globalTimeout(hours: 2)
-    ->step('step1', ActionOne::class)
-    ->step('step2', ActionTwo::class)
-    ->build();
-```
+Timeout string formats: `'30s'` (seconds), `'5m'` (minutes), `'2h'` (hours), `'1d'` (days).
 
 ### Timeout Handling
 
-Handle timeouts gracefully:
+Handle timeouts gracefully in your actions:
 
 ```php
 class TimeSensitiveAction implements WorkflowAction
@@ -215,15 +201,30 @@ class TimeSensitiveAction implements WorkflowAction
     public function execute(WorkflowContext $context): ActionResult
     {
         $startTime = time();
-        
+
         while (time() - $startTime < 25) { // Leave 5 seconds buffer
             if ($this->operationComplete()) {
                 return ActionResult::success();
             }
             sleep(1);
         }
-        
+
         return ActionResult::failure('Operation timed out');
+    }
+
+    public function canExecute(WorkflowContext $context): bool
+    {
+        return true;
+    }
+
+    public function getName(): string
+    {
+        return 'Time Sensitive Operation';
+    }
+
+    public function getDescription(): string
+    {
+        return 'Performs a time-sensitive operation with graceful timeout';
     }
 }
 ```
@@ -232,44 +233,34 @@ class TimeSensitiveAction implements WorkflowAction
 
 ### Simple Conditions
 
-Use simple expressions for conditions:
+Use the `when()` method on the builder for conditional steps:
 
 ```php
 $workflow = WorkflowBuilder::create('conditional-flow')
-    ->when('user.type == "premium"', fn($builder) =>
-        $builder->step('premium-benefits', PremiumBenefitsAction::class)
+    ->addStep('validate', ValidateAction::class)
+    ->when('user.type === "premium"', fn($builder) =>
+        $builder->addStep('premium-benefits', PremiumBenefitsAction::class)
     )
     ->when('order.total > 100', fn($builder) =>
-        $builder->step('apply-discount', DiscountAction::class)
+        $builder->addStep('apply-discount', DiscountAction::class)
     )
     ->build();
 ```
 
-### Complex Conditions
+### Condition Steps
 
-Use complex logic with the ConditionAction:
+Use the built-in `ConditionAction` for inline condition evaluation:
 
 ```php
-use SolutionForest\WorkflowEngine\Actions\ConditionAction;
-
-$workflow = WorkflowBuilder::create('complex-conditions')
-    ->step('evaluate', new ConditionAction([
-        'user.age >= 18 AND user.verified == true' => [
-            ['action' => VerifiedAdultAction::class],
-        ],
-        'user.age >= 18 AND user.verified == false' => [
-            ['action' => RequestVerificationAction::class],
-        ],
-        'user.age < 18' => [
-            ['action' => MinorUserAction::class],
-        ],
-    ]))
+$workflow = WorkflowBuilder::create('condition-check')
+    ->condition('user.verified === true')
+    ->addStep('proceed', ProceedAction::class)
     ->build();
 ```
 
 ### Dynamic Conditions
 
-Evaluate conditions at runtime:
+Evaluate conditions at runtime within your action:
 
 ```php
 class DynamicConditionAction implements WorkflowAction
@@ -277,104 +268,57 @@ class DynamicConditionAction implements WorkflowAction
     public function execute(WorkflowContext $context): ActionResult
     {
         $user = $context->getData('user');
-        
+
         if ($this->shouldSendWelcomeEmail($user)) {
             return ActionResult::success(['next_action' => 'send_welcome']);
         }
-        
+
         if ($this->shouldRequestVerification($user)) {
             return ActionResult::success(['next_action' => 'request_verification']);
         }
-        
+
         return ActionResult::success(['next_action' => 'skip']);
     }
-}
-```
 
-## Parallel Execution
-
-### Fork and Join
-
-Execute multiple branches in parallel:
-
-```php
-$workflow = WorkflowBuilder::create('parallel-processing')
-    ->fork([
-        'email-branch' => fn($builder) => 
-            $builder->email('notification', to: '{{ user.email }}'),
-        'sms-branch' => fn($builder) =>
-            $builder->step('send-sms', SendSmsAction::class),
-        'push-branch' => fn($builder) =>
-            $builder->step('push-notification', PushNotificationAction::class)
-    ])
-    ->join()
-    ->step('cleanup', CleanupAction::class)
-    ->build();
-```
-
-### Async Actions
-
-Mark actions as asynchronous:
-
-```php
-use SolutionForest\WorkflowEngine\Attributes\Async;
-
-class UploadFileAction implements WorkflowAction
-{
-    #[Async]
-    public function execute(WorkflowContext $context): ActionResult
+    public function canExecute(WorkflowContext $context): bool
     {
-        // This action will run in a separate queue job
-        $file = $context->getData('file');
-        $this->uploadToS3($file);
-        
-        return ActionResult::success(['upload_url' => $url]);
+        return $context->hasData('user');
+    }
+
+    public function getName(): string
+    {
+        return 'Dynamic Condition Check';
+    }
+
+    public function getDescription(): string
+    {
+        return 'Evaluates conditions dynamically at runtime';
     }
 }
 ```
 
-## Queue Integration
+## Quick Workflow Templates
 
-### Background Processing
-
-Long-running workflows automatically use Laravel's queue system:
+Use pre-built workflow patterns for common scenarios:
 
 ```php
-// This workflow will run in the background
-$workflow = WorkflowBuilder::create('background-workflow')
-    ->step('heavy-processing', HeavyProcessingAction::class)
-    ->delay(hours: 1)
-    ->step('followup', FollowupAction::class)
+use SolutionForest\WorkflowEngine\Core\WorkflowBuilder;
+
+// User onboarding template
+$onboarding = WorkflowBuilder::quick()
+    ->userOnboarding('premium-onboarding')
+    ->then(SetupPremiumFeaturesAction::class)
     ->build();
 
-// Start it
-$instance = $workflow->start($data);
-```
+// Order processing template
+$orderFlow = WorkflowBuilder::quick()
+    ->orderProcessing('express-order')
+    ->build();
 
-### Queue Configuration
-
-Configure queue settings in your config file:
-
-```php
-// config/workflow-engine.php
-return [
-    'queue' => [
-        'connection' => 'redis',
-        'queue' => 'workflows',
-        'retry_after' => 300,
-        'max_attempts' => 3,
-    ],
-];
-```
-
-### Priority Queues
-
-Set priorities for workflow jobs:
-
-```php
-$workflow = WorkflowBuilder::create('priority-workflow')
-    ->priority('high')
-    ->step('urgent-task', UrgentTaskAction::class)
+// Document approval template
+$approval = WorkflowBuilder::quick()
+    ->documentApproval('legal-review')
+    ->addStep('legal-sign-off', LegalSignOffAction::class)
     ->build();
 ```
 
@@ -382,12 +326,15 @@ $workflow = WorkflowBuilder::create('priority-workflow')
 
 ### Workflow Events
 
-Listen to workflow events:
+Listen to workflow events in your Laravel application:
 
 ```php
 use SolutionForest\WorkflowEngine\Events\WorkflowStarted;
 use SolutionForest\WorkflowEngine\Events\WorkflowCompletedEvent;
 use SolutionForest\WorkflowEngine\Events\WorkflowFailedEvent;
+use SolutionForest\WorkflowEngine\Events\WorkflowCancelled;
+use SolutionForest\WorkflowEngine\Events\StepCompletedEvent;
+use SolutionForest\WorkflowEngine\Events\StepFailedEvent;
 
 // In your EventServiceProvider
 protected $listen = [
@@ -402,101 +349,88 @@ protected $listen = [
         LogWorkflowFailure::class,
         AlertAdministrators::class,
     ],
+    StepCompletedEvent::class => [
+        TrackStepProgress::class,
+    ],
+    StepFailedEvent::class => [
+        LogStepFailure::class,
+    ],
 ];
 ```
 
-### Custom Metrics
+### Workflow Status Monitoring
 
-Track custom metrics:
-
-```php
-class MetricsAction implements WorkflowAction
-{
-    public function execute(WorkflowContext $context): ActionResult
-    {
-        $startTime = microtime(true);
-        
-        // Your business logic
-        $result = $this->performOperation();
-        
-        $duration = microtime(true) - $startTime;
-        
-        // Track metrics
-        Metrics::timing('workflow.step.duration', $duration, [
-            'workflow' => $context->getWorkflowName(),
-            'step' => $context->getCurrentStepId(),
-        ]);
-        
-        return ActionResult::success(['result' => $result]);
-    }
-}
-```
-
-### Health Checks
-
-Monitor workflow health:
+Track workflow status programmatically:
 
 ```php
-Route::get('/health/workflows', function() {
-    $stats = WorkflowEngine::getHealthStats();
-    
-    return response()->json([
-        'status' => $stats['failed_count'] > 10 ? 'unhealthy' : 'healthy',
-        'running_workflows' => $stats['running_count'],
-        'failed_workflows' => $stats['failed_count'],
-        'average_duration' => $stats['avg_duration'],
-    ]);
-});
+$engine = app(WorkflowEngine::class);
+
+// Get workflow status
+$status = $engine->getStatus($instanceId);
+// Returns: workflow_id, name, state, current_step, progress, created_at, updated_at
+
+// List workflows with filters
+$running = $engine->listWorkflows(['state' => 'running']);
+$recent = $engine->listWorkflows(['state' => 'failed', 'limit' => 10]);
+
+// Get workflow instance details
+$instance = $engine->getInstance($instanceId);
+echo $instance->getProgress(); // 0.0 to 100.0
+echo $instance->getState()->label(); // 'Running', 'Completed', etc.
+echo $instance->getStatusSummary(); // Full status summary array
 ```
 
 ## Testing Workflows
 
 ### Unit Testing Actions
 
-Test individual actions:
+Test individual actions with a `WorkflowContext`:
 
 ```php
 class ProcessPaymentActionTest extends TestCase
 {
     public function test_successful_payment()
     {
-        $context = new WorkflowContext([
-            'payment' => ['amount' => 100, 'token' => 'tok_123']
-        ], 'workflow-1', 'payment-step');
-        
+        $context = new WorkflowContext(
+            workflowId: 'workflow-1',
+            stepId: 'payment-step',
+            data: [
+                'payment' => ['amount' => 100, 'token' => 'tok_123']
+            ]
+        );
+
         $action = new ProcessPaymentAction();
         $result = $action->execute($context);
-        
-        $this->assertTrue($result->success);
-        $this->assertArrayHasKey('payment_id', $result->data);
+
+        $this->assertTrue($result->isSuccess());
+        $this->assertNotEmpty($result->get('payment_id'));
     }
 }
 ```
 
 ### Integration Testing
 
-Test complete workflows:
+Test complete workflows using the engine:
 
 ```php
 class OrderWorkflowTest extends TestCase
 {
     public function test_complete_order_workflow()
     {
-        $order = Order::factory()->create();
-        
-        $workflow = WorkflowBuilder::create('test-order')
-            ->step('validate', ValidateOrderAction::class)
-            ->step('process-payment', ProcessPaymentAction::class)
-            ->step('fulfill', FulfillOrderAction::class)
+        $engine = app(WorkflowEngine::class);
+
+        $definition = WorkflowBuilder::create('test-order')
+            ->addStep('validate', ValidateOrderAction::class)
+            ->addStep('process-payment', ProcessPaymentAction::class)
+            ->addStep('fulfill', FulfillOrderAction::class)
             ->build();
-        
-        $instance = $workflow->start(['order' => $order]);
-        
-        // Simulate workflow execution
-        $instance->run();
-        
-        $this->assertEquals(WorkflowState::Completed, $instance->getState());
-        $this->assertTrue($order->fresh()->is_fulfilled);
+
+        $instanceId = $engine->start('test-order-1', $definition->toArray(), [
+            'order' => ['id' => 1, 'total' => 99.99]
+        ]);
+
+        $instance = $engine->getInstance($instanceId);
+        $this->assertEquals(WorkflowState::COMPLETED, $instance->getState());
     }
 }
 ```
@@ -513,12 +447,17 @@ class ExternalApiActionTest extends TestCase
         Http::fake([
             'api.example.com/*' => Http::response(['success' => true], 200)
         ]);
-        
-        $context = new WorkflowContext(['data' => 'test'], 'workflow-1', 'api-step');
+
+        $context = new WorkflowContext(
+            workflowId: 'workflow-1',
+            stepId: 'api-step',
+            data: ['data' => 'test']
+        );
+
         $action = new ExternalApiAction();
         $result = $action->execute($context);
-        
-        $this->assertTrue($result->success);
+
+        $this->assertTrue($result->isSuccess());
         Http::assertSent(function ($request) {
             return $request->url() === 'https://api.example.com/webhook';
         });

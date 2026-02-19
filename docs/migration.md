@@ -28,6 +28,7 @@ php artisan vendor:publish --tag="workflow-engine-config" --force
 #### 3. Run New Migrations
 
 ```bash
+php artisan vendor:publish --tag="workflow-engine-migrations"
 php artisan migrate
 ```
 
@@ -62,16 +63,16 @@ $instance = WorkflowMastery::start($orderWorkflow, $data);
 
 ```php
 use SolutionForest\WorkflowEngine\Core\WorkflowBuilder;
+use SolutionForest\WorkflowEngine\Core\WorkflowEngine;
 
-$workflow = WorkflowBuilder::create('order-processing')
-    ->step('validate', ValidateOrderAction::class)
-    ->step('payment', ProcessPaymentAction::class)
-        ->retry(attempts: 3)
-        ->onFailure(RefundAction::class)
-    ->step('shipping', CreateShipmentAction::class)
+$definition = WorkflowBuilder::create('order-processing')
+    ->addStep('validate', ValidateOrderAction::class)
+    ->addStep('payment', ProcessPaymentAction::class, [], null, 3) // 3 retry attempts
+    ->addStep('shipping', CreateShipmentAction::class)
     ->build();
 
-$instance = $workflow->start($data);
+$engine = app(WorkflowEngine::class);
+$instanceId = $engine->start('order-001', $definition->toArray(), $data);
 ```
 
 #### 5. Update Action Classes
@@ -84,10 +85,10 @@ class ProcessPaymentAction
     public function execute($context)
     {
         $orderData = $context['order'] ?? [];
-        
+
         // Process payment
         $result = $this->chargeCard($orderData);
-        
+
         return [
             'success' => $result['success'],
             'data' => $result['data'] ?? [],
@@ -107,15 +108,32 @@ class ProcessPaymentAction implements WorkflowAction
     public function execute(WorkflowContext $context): ActionResult
     {
         $order = $context->getData('order');
-        
+
         // Process payment
         $result = $this->chargeCard($order);
-        
+
         if ($result['success']) {
             return ActionResult::success($result['data']);
         }
-        
-        return ActionResult::failure('Payment failed', $result['error']);
+
+        return ActionResult::failure('Payment failed', [
+            'error' => $result['error'] ?? 'Unknown error'
+        ]);
+    }
+
+    public function canExecute(WorkflowContext $context): bool
+    {
+        return $context->hasData('order');
+    }
+
+    public function getName(): string
+    {
+        return 'Process Payment';
+    }
+
+    public function getDescription(): string
+    {
+        return 'Processes customer payment through configured gateway';
     }
 }
 ```
@@ -141,18 +159,25 @@ $orderTotal = $context['order']['total'];
 
 ```php
 // Context is now a readonly class
-$context = new WorkflowContext([
-    'user' => $user,
-    'order' => $order
-], $workflowId, $stepId);
+$context = new WorkflowContext(
+    workflowId: $workflowId,
+    stepId: $stepId,
+    data: [
+        'user' => $user,
+        'order' => $order
+    ]
+);
 
-// Use getter methods
+// Use getter methods with dot notation
 $user = $context->getData('user');
 $userId = $context->getData('user.id');
 $orderTotal = $context->getData('order.total');
 
 // Create new context with additional data (immutable)
-$newContext = $context->with(['payment_result' => $paymentData]);
+$newContext = $context->with('payment_result', $paymentData);
+
+// Or merge multiple values
+$newContext = $context->withData(['payment_result' => $paymentData, 'status' => 'paid']);
 ```
 
 #### 7. Update Error Handling
@@ -177,16 +202,20 @@ try {
 ```php
 try {
     $result = $action->execute($context);
-    
-    match($result->status) {
-        'success' => $this->proceedToNextStep($result),
-        'failure' => $this->handleFailure($result),
-        'retry' => $this->scheduleRetry($result),
-    };
+
+    if ($result->isSuccess()) {
+        $this->proceedToNextStep($result);
+    } else {
+        $this->handleFailure($result);
+        Log::warning('Action failed', [
+            'error' => $result->getErrorMessage(),
+            'metadata' => $result->getMetadata()
+        ]);
+    }
 } catch (\Exception $e) {
     Log::error('Workflow failed', [
         'workflow_id' => $context->workflowId,
-        'step_id' => $context->currentStepId,
+        'step_id' => $context->stepId,
         'error' => $e->getMessage()
     ]);
 }
@@ -200,52 +229,81 @@ try {
 use SolutionForest\WorkflowEngine\Core\WorkflowState;
 
 // Rich enum with methods
-$state = WorkflowState::Running;
-echo $state->label();     // "In Progress"
-echo $state->color();     // "blue"
-echo $state->icon();      // "▶️"
+$state = WorkflowState::RUNNING;
+echo $state->label();       // "Running"
+echo $state->color();       // "blue"
+echo $state->icon();        // "▶️"
+echo $state->description(); // Detailed description
+
+// State category checks
+$state->isActive();     // true for PENDING, RUNNING, WAITING, PAUSED
+$state->isFinished();   // true for COMPLETED, FAILED, CANCELLED
+$state->isSuccessful(); // true only for COMPLETED
+$state->isError();      // true only for FAILED
 
 // Smart state transitions
-if ($state->canTransitionTo(WorkflowState::Completed)) {
+if ($state->canTransitionTo(WorkflowState::COMPLETED)) {
     $workflow->complete();
 }
+
+$validTargets = $state->getValidTransitions(); // Array of valid target states
 ```
 
 #### 2. Attribute-Based Configuration
 
 ```php
-use SolutionForest\WorkflowEngine\Attributes\{WorkflowStep, Timeout, Retry};
+use SolutionForest\WorkflowEngine\Attributes\{WorkflowStep, Timeout, Retry, Condition};
 
+#[WorkflowStep(
+    id: 'process-payment',
+    name: 'Process Payment',
+    description: 'Processes customer payment'
+)]
+#[Timeout(minutes: 5)]
+#[Retry(attempts: 3, backoff: 'exponential')]
+#[Condition('order.amount > 0')]
 class ProcessPaymentAction implements WorkflowAction
 {
-    #[WorkflowStep('process-payment')]
-    #[Timeout(minutes: 5)]
-    #[Retry(attempts: 3, backoff: 'exponential')]
     public function execute(WorkflowContext $context): ActionResult
     {
         // Action implementation
     }
+
+    public function canExecute(WorkflowContext $context): bool
+    {
+        return $context->hasData('order');
+    }
+
+    public function getName(): string
+    {
+        return 'Process Payment';
+    }
+
+    public function getDescription(): string
+    {
+        return 'Processes customer payment';
+    }
 }
 ```
 
-#### 3. Simple Workflow Helpers
+#### 3. Quick Workflow Templates
 
 ```php
-use SolutionForest\WorkflowEngine\Support\SimpleWorkflow;
+use SolutionForest\WorkflowEngine\Core\WorkflowBuilder;
 
-// Quick common workflows
-$onboarding = SimpleWorkflow::quick()
-    ->email('welcome', to: 'user@example.com')
-    ->delay(days: 1)
-    ->email('tips', to: 'user@example.com')
+// Pre-built workflow templates
+$onboarding = WorkflowBuilder::quick()
+    ->userOnboarding('premium-onboarding')
+    ->then(SetupPremiumFeaturesAction::class)
     ->build();
 
-// Sequential workflows
-$approval = SimpleWorkflow::sequential([
-    'submit' => SubmitAction::class,
-    'review' => ReviewAction::class,
-    'approve' => ApproveAction::class
-])->build();
+$orderFlow = WorkflowBuilder::quick()
+    ->orderProcessing('express-order')
+    ->build();
+
+$approval = WorkflowBuilder::quick()
+    ->documentApproval('legal-review')
+    ->build();
 ```
 
 #### 4. Smart Actions
@@ -253,57 +311,19 @@ $approval = SimpleWorkflow::sequential([
 ```php
 // HTTP actions with template processing
 $workflow = WorkflowBuilder::create('api-integration')
-    ->http('POST', 'https://api.example.com/webhook', [
+    ->http('https://api.example.com/webhook', 'POST', [
         'user_id' => '{{ user.id }}',
         'event' => 'user_registered',
-        'timestamp' => '{{ now }}'
     ])
     ->build();
 
 // Conditional actions
 $workflow = WorkflowBuilder::create('conditional-flow')
     ->when('user.age >= 18', fn($builder) =>
-        $builder->step('adult-verification', AdultVerificationAction::class)
+        $builder->addStep('adult-verification', AdultVerificationAction::class)
     )
     ->build();
 ```
-
-### Backward Compatibility
-
-The package maintains backward compatibility for v1.x workflows during the transition period:
-
-```php
-// V1.x workflows still work (deprecated)
-$legacyWorkflow = [
-    'name' => 'legacy-workflow',
-    'steps' => [/* ... */]
-];
-
-// But you'll see deprecation warnings
-$instance = WorkflowEngine::startLegacy($legacyWorkflow, $data);
-```
-
-### Migration Helper Command
-
-Use the built-in migration command to convert existing workflows:
-
-```bash
-# Convert a single workflow file
-php artisan workflow:migrate app/Workflows/OrderProcessing.php
-
-# Convert all workflows in a directory
-php artisan workflow:migrate app/Workflows/ --recursive
-
-# Dry run to see what would change
-php artisan workflow:migrate app/Workflows/ --dry-run
-```
-
-### Testing Your Migration
-
-1. **Run Your Test Suite**: Ensure all existing tests pass
-2. **Check Logs**: Look for deprecation warnings
-3. **Monitor Performance**: New features should improve performance
-4. **Validate Functionality**: Verify workflows behave identically
 
 ### Common Migration Issues
 
@@ -315,14 +335,18 @@ TypeError: Argument 1 passed to WorkflowContext::__construct() must be of type a
 ```
 
 **Solution:**
-Ensure you're passing arrays to the WorkflowContext constructor:
+Use named parameters with the WorkflowContext constructor:
 
 ```php
 // Wrong
 $context = new WorkflowContext($user, $workflowId, $stepId);
 
 // Correct
-$context = new WorkflowContext(['user' => $user], $workflowId, $stepId);
+$context = new WorkflowContext(
+    workflowId: $workflowId,
+    stepId: $stepId,
+    data: ['user' => $user]
+);
 ```
 
 #### Issue: Property Access on Readonly Classes
@@ -339,8 +363,11 @@ Use immutable methods instead of direct property modification:
 // Wrong
 $context->data['new_key'] = $value;
 
-// Correct
-$context = $context->withData('new_key', $value);
+// Correct - single value
+$context = $context->with('new_key', $value);
+
+// Correct - multiple values
+$context = $context->withData(['new_key' => $value, 'other' => $other]);
 ```
 
 #### Issue: Namespace Changes
@@ -361,6 +388,30 @@ use SolutionForest\WorkflowMastery\Contracts\WorkflowAction;
 use SolutionForest\WorkflowEngine\Contracts\WorkflowAction;
 ```
 
+#### Issue: ActionResult API Changes
+
+**Error:**
+```
+Call to undefined method ActionResult::retry()
+```
+
+**Solution:**
+Use the new ActionResult API:
+
+```php
+// Old API
+return ActionResult::retry('Rate limited');
+$result->success;  // property access
+$result->message;  // property access
+
+// New API
+return ActionResult::failure('Rate limited', ['retry_after' => 60]);
+$result->isSuccess();       // method call
+$result->getErrorMessage(); // method call
+$result->getData();         // method call
+$result->getMetadata();     // method call
+```
+
 ### Performance Improvements
 
 The new version includes several performance optimizations:
@@ -374,7 +425,6 @@ The new version includes several performance optimizations:
 
 If you encounter issues during migration:
 
-1. Check the [troubleshooting guide](troubleshooting.md)
-2. Review the [examples](../src/Examples/ModernWorkflowExamples.php)
+1. Review the [API Reference](api-reference.md)
+2. Check the [Advanced Features](advanced-features.md) guide
 3. Open an issue on [GitHub](https://github.com/solutionforest/workflow-engine-laravel/issues)
-4. Join our [Discord community](https://discord.gg/workflow-engine)

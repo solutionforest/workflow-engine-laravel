@@ -6,21 +6,38 @@ The `WorkflowBuilder` class provides a fluent API for creating workflows.
 
 ### Methods
 
-#### `create(string $name): self`
+#### `create(string $name): static`
 
-Creates a new workflow builder instance.
+Creates a new workflow builder instance. Name must start with a letter and contain only letters, numbers, hyphens, and underscores.
 
 ```php
 $builder = WorkflowBuilder::create('my-workflow');
 ```
 
-#### `addStep(string $id, string $actionClass, array $config = [], ?int $timeout = null, int $retryAttempts = 0): self`
+#### `description(string $description): self`
 
-Adds a custom action step to the workflow.
+Sets a human-readable description for the workflow.
+
+```php
+$builder->description('Handles complete user onboarding process');
+```
+
+#### `version(string $version): self`
+
+Sets the workflow version for change tracking.
+
+```php
+$builder->version('2.1.0');
+```
+
+#### `addStep(string $id, string|WorkflowAction $action, array $config = [], string|int|null $timeout = null, int $retryAttempts = 0): self`
+
+Adds a custom action step to the workflow. Timeout accepts seconds as integer or string format (`'30s'`, `'5m'`, `'2h'`, `'1d'`). Retry attempts must be between 0 and 10.
 
 ```php
 $builder->addStep('process-payment', ProcessPaymentAction::class);
 $builder->addStep('process-payment', ProcessPaymentAction::class, ['currency' => 'USD'], 30, 3);
+$builder->addStep('slow-task', SlowAction::class, timeout: '5m', retryAttempts: 3);
 ```
 
 #### `email(string $template, string $to, string $subject, array $data = []): self`
@@ -42,19 +59,27 @@ $builder->http('https://api.example.com/webhooks', 'POST', [
 ]);
 ```
 
-#### `delay(int $seconds = null, int $minutes = null, int $hours = null, int $days = null): self`
+#### `delay(int $seconds = null, int $minutes = null, int $hours = null): self`
 
 Adds a delay step to the workflow.
 
 ```php
 $builder->delay(minutes: 30);
 $builder->delay(hours: 2);
-$builder->delay(days: 1);
+$builder->delay(hours: 1, minutes: 30); // 1.5 hour delay
+```
+
+#### `condition(string $condition): self`
+
+Adds a condition check step for workflow branching.
+
+```php
+$builder->condition('user.verified === true');
 ```
 
 #### `when(string $condition, callable $callback): self`
 
-Adds conditional logic to the workflow.
+Adds conditional logic to the workflow. Steps added in the callback are only executed when the condition is met.
 
 ```php
 $builder->when('user.age >= 18', function($builder) {
@@ -62,20 +87,32 @@ $builder->when('user.age >= 18', function($builder) {
 });
 ```
 
-#### `startWith(string $actionClass, array $config = [], ?int $timeout = null, int $retryAttempts = 0): self`
+#### `startWith(string|WorkflowAction $action, array $config = [], string|int|null $timeout = null, int $retryAttempts = 0): self`
 
-Adds the first step in a workflow (syntactic sugar for better readability).
+Adds the first step in a workflow (syntactic sugar for better readability). Auto-generates a step ID.
 
 ```php
 $builder->startWith(ValidateInputAction::class, ['strict' => true]);
 ```
 
-#### `then(string $actionClass, array $config = [], ?int $timeout = null, int $retryAttempts = 0): self`
+#### `then(string|WorkflowAction $action, array $config = [], string|int|null $timeout = null, int $retryAttempts = 0): self`
 
-Adds a sequential step (syntactic sugar for better readability).
+Adds a sequential step (syntactic sugar for better readability). Auto-generates a step ID.
 
 ```php
 $builder->then(ProcessDataAction::class)->then(SaveResultAction::class);
+```
+
+#### `withMetadata(array $metadata): self`
+
+Adds custom metadata to the workflow definition.
+
+```php
+$builder->withMetadata([
+    'author' => 'John Doe',
+    'department' => 'Engineering',
+    'priority' => 'high'
+]);
 ```
 
 #### `build(): WorkflowDefinition`
@@ -86,51 +123,159 @@ Builds and returns the workflow definition.
 $workflow = $builder->build();
 ```
 
+#### `quick(): QuickWorkflowBuilder` (static)
+
+Returns a `QuickWorkflowBuilder` instance for pre-built common workflow patterns.
+
+```php
+$workflow = WorkflowBuilder::quick()->userOnboarding('new-user-flow');
+$workflow = WorkflowBuilder::quick()->orderProcessing();
+$workflow = WorkflowBuilder::quick()->documentApproval();
+```
+
+## WorkflowAction Interface
+
+The `WorkflowAction` interface defines the contract for all workflow step implementations.
+
+### Methods
+
+#### `execute(WorkflowContext $context): ActionResult`
+
+Execute the workflow action with the provided context. This is the core method where the action's business logic is implemented.
+
+#### `canExecute(WorkflowContext $context): bool`
+
+Check if this action can be executed with the given context. Allows for pre-execution validation and conditional logic.
+
+#### `getName(): string`
+
+Get the human-readable display name for this action.
+
+#### `getDescription(): string`
+
+Get a detailed description of what this action does.
+
+```php
+class CreateUserProfileAction implements WorkflowAction
+{
+    public function execute(WorkflowContext $context): ActionResult
+    {
+        $userData = $context->getData('user');
+        $profile = UserProfile::create(['user_id' => $userData['id']]);
+        return ActionResult::success(['profile_id' => $profile->id]);
+    }
+
+    public function canExecute(WorkflowContext $context): bool
+    {
+        return $context->hasData('user.id');
+    }
+
+    public function getName(): string
+    {
+        return 'Create User Profile';
+    }
+
+    public function getDescription(): string
+    {
+        return 'Creates a new user profile in the database';
+    }
+}
+```
+
 ## WorkflowContext
 
-The `WorkflowContext` class holds the data that flows through the workflow.
+The `WorkflowContext` class holds the data that flows through the workflow. It is an immutable `final readonly` class.
 
 ### Properties
-
-#### `readonly array $data`
-
-The workflow data.
 
 #### `readonly string $workflowId`
 
 The unique workflow instance ID.
 
-#### `readonly string $currentStepId`
+#### `readonly string $stepId`
 
 The ID of the current step.
 
+#### `readonly array $data`
+
+The workflow data.
+
+#### `readonly array $config`
+
+Step-specific configuration parameters.
+
+#### `readonly ?WorkflowInstance $instance`
+
+The associated workflow instance (if available).
+
+#### `readonly DateTime $executedAt`
+
+Timestamp when this context was created.
+
 ### Methods
 
-#### `getData(string $key = null): mixed`
+#### `getData(?string $key = null, mixed $default = null): mixed`
 
-Gets data from the context.
+Gets data from the context. Without parameters returns all data. Supports dot notation for nested access.
 
 ```php
 $allData = $context->getData();
 $user = $context->getData('user');
 $userName = $context->getData('user.name');
+$email = $context->getData('user.email', 'unknown@example.com');
 ```
 
-#### `with(array $data): self`
+#### `with(string $key, mixed $value): static`
 
-Creates a new context with additional data.
+Creates a new context with a single data value set. Supports dot notation.
 
 ```php
-$newContext = $context->with(['step_result' => $result]);
+$newContext = $context->with('user.verified', true);
+$newContext = $context->with('order.items.0.quantity', 2);
 ```
 
-#### `withData(string $key, mixed $value): self`
+#### `withData(array $newData): static`
 
-Creates a new context with a single data value.
+Creates a new context with additional data merged in (immutable operation).
 
 ```php
-$newContext = $context->withData('status', 'completed');
+$newContext = $context->withData([
+    'order' => ['id' => 123, 'total' => 99.99],
+    'payment' => ['method' => 'credit_card']
+]);
 ```
+
+#### `hasData(string $key): bool`
+
+Check if a data key exists in the context. Supports dot notation.
+
+```php
+if ($context->hasData('user.email')) {
+    // User email is available
+}
+```
+
+#### `getConfig(?string $key = null, mixed $default = null): mixed`
+
+Get configuration value(s) for the current step. Supports dot notation.
+
+```php
+$timeout = $context->getConfig('timeout', 30);
+$retries = $context->getConfig('retry.attempts', 3);
+$allConfig = $context->getConfig(); // Gets all configuration
+```
+
+#### `getWorkflowId(): string`
+
+Get the workflow identifier.
+
+#### `getStepId(): string`
+
+Get the current step identifier.
+
+#### `toArray(): array`
+
+Convert the context to an array representation for serialization.
 
 ## WorkflowState
 
@@ -138,23 +283,56 @@ Enum representing workflow states.
 
 ### Values
 
-- `Pending` - Workflow is created but not started
-- `Running` - Workflow is currently executing
-- `Completed` - Workflow finished successfully
-- `Failed` - Workflow failed with an error
-- `Cancelled` - Workflow was cancelled
-- `Paused` - Workflow is temporarily paused
+- `PENDING` - Workflow is created but not started
+- `RUNNING` - Workflow is currently executing
+- `WAITING` - Workflow is waiting for external input or conditions
+- `PAUSED` - Workflow is temporarily paused
+- `COMPLETED` - Workflow finished successfully
+- `FAILED` - Workflow failed with an error
+- `CANCELLED` - Workflow was cancelled
 
 ### Methods
 
-#### `color(): string`
+#### `isActive(): bool`
 
-Returns a color representing the state.
+Returns true for active states (`PENDING`, `RUNNING`, `WAITING`, `PAUSED`).
 
 ```php
-WorkflowState::Running->color(); // 'blue'
-WorkflowState::Completed->color(); // 'green'
-WorkflowState::Failed->color(); // 'red'
+if ($state->isActive()) {
+    // Workflow can still progress
+}
+```
+
+#### `isFinished(): bool`
+
+Returns true for terminal states (`COMPLETED`, `FAILED`, `CANCELLED`).
+
+```php
+if ($state->isFinished()) {
+    // Workflow execution has ended
+}
+```
+
+#### `isSuccessful(): bool`
+
+Returns true only for `COMPLETED` state.
+
+#### `isError(): bool`
+
+Returns true only for `FAILED` state.
+
+#### `color(): string`
+
+Returns a color name representing the state.
+
+```php
+WorkflowState::PENDING->color();   // 'gray'
+WorkflowState::RUNNING->color();   // 'blue'
+WorkflowState::WAITING->color();   // 'yellow'
+WorkflowState::PAUSED->color();    // 'orange'
+WorkflowState::COMPLETED->color(); // 'green'
+WorkflowState::FAILED->color();    // 'red'
+WorkflowState::CANCELLED->color(); // 'purple'
 ```
 
 #### `icon(): string`
@@ -162,9 +340,9 @@ WorkflowState::Failed->color(); // 'red'
 Returns an emoji icon for the state.
 
 ```php
-WorkflowState::Running->icon(); // '▶️'
-WorkflowState::Completed->icon(); // '✅'
-WorkflowState::Failed->icon(); // '❌'
+WorkflowState::RUNNING->icon();   // '▶️'
+WorkflowState::COMPLETED->icon(); // '✅'
+WorkflowState::FAILED->icon();    // '❌'
 ```
 
 #### `label(): string`
@@ -172,8 +350,18 @@ WorkflowState::Failed->icon(); // '❌'
 Returns a human-readable label.
 
 ```php
-WorkflowState::Running->label(); // 'In Progress'
-WorkflowState::Completed->label(); // 'Completed'
+WorkflowState::PENDING->label();   // 'Pending'
+WorkflowState::RUNNING->label();   // 'Running'
+WorkflowState::COMPLETED->label(); // 'Completed'
+```
+
+#### `description(): string`
+
+Returns a detailed description of what the state means.
+
+```php
+WorkflowState::RUNNING->description();
+// 'The workflow is actively executing steps. One or more actions are currently being processed.'
 ```
 
 #### `canTransitionTo(WorkflowState $state): bool`
@@ -181,118 +369,231 @@ WorkflowState::Completed->label(); // 'Completed'
 Checks if the state can transition to another state.
 
 ```php
-if ($currentState->canTransitionTo(WorkflowState::Completed)) {
+if ($currentState->canTransitionTo(WorkflowState::COMPLETED)) {
     // Can transition to completed
 }
 ```
 
+Valid transitions:
+- `PENDING` -> `RUNNING`, `CANCELLED`
+- `RUNNING` -> `WAITING`, `PAUSED`, `COMPLETED`, `FAILED`, `CANCELLED`
+- `WAITING` -> `RUNNING`, `FAILED`, `CANCELLED`
+- `PAUSED` -> `RUNNING`, `CANCELLED`
+- Terminal states (`COMPLETED`, `FAILED`, `CANCELLED`) -> none
+
+#### `getValidTransitions(): array`
+
+Returns all possible states that can be transitioned to from this state.
+
+```php
+$validStates = WorkflowState::RUNNING->getValidTransitions();
+// [WAITING, PAUSED, COMPLETED, FAILED, CANCELLED]
+```
+
 ## ActionResult
 
-Represents the result of an action execution.
+Represents the result of an action execution. This is an immutable value object.
 
 ### Static Methods
 
-#### `success(array $data = []): self`
+#### `success(array $data = [], array $metadata = []): static`
 
-Creates a successful result.
+Creates a successful result with optional data and metadata.
 
 ```php
 return ActionResult::success(['user_id' => 123]);
+return ActionResult::success(
+    ['processed_count' => 50],
+    ['execution_time_ms' => 1250]
+);
 ```
 
-#### `failure(string $message, array $data = []): self`
+#### `failure(string $errorMessage, array $metadata = []): static`
 
-Creates a failed result.
+Creates a failed result with an error message and optional metadata.
 
 ```php
-return ActionResult::failure('Payment failed', ['error_code' => 'CARD_DECLINED']);
+return ActionResult::failure('Payment failed');
+return ActionResult::failure('API rate limit exceeded', [
+    'retry_after' => 3600,
+    'requests_remaining' => 0
+]);
 ```
 
-#### `retry(string $message = 'Retrying', array $data = []): self`
+### Methods
 
-Creates a result that triggers a retry.
-
-```php
-return ActionResult::retry('Rate limited, retrying...', ['retry_after' => 60]);
-```
-
-### Properties
-
-#### `readonly bool $success`
+#### `isSuccess(): bool`
 
 Whether the action succeeded.
 
-#### `readonly string $message`
+#### `isFailure(): bool`
 
-The result message.
+Whether the action failed.
 
-#### `readonly array $data`
+#### `getErrorMessage(): ?string`
 
-Additional result data.
+Returns the error message for failed results, or null for successful results.
+
+#### `getData(): array`
+
+Returns the result data array. Empty array for failed results.
+
+#### `hasData(): bool`
+
+Returns true if the result contains any data.
+
+#### `getMetadata(): array`
+
+Returns additional execution metadata.
+
+#### `get(string $key, mixed $default = null): mixed`
+
+Get a specific data value using dot notation.
+
+```php
+$userId = $result->get('user.id');
+$email = $result->get('user.email', 'N/A');
+```
+
+#### `withMetadata(array $metadata): static`
+
+Creates a new result with additional metadata merged.
+
+```php
+$resultWithMetadata = $result->withMetadata([
+    'execution_time' => 150,
+    'cache_hit' => true
+]);
+```
+
+#### `withMetadataEntry(string $key, mixed $value): self`
+
+Creates a new result with a single additional metadata entry.
+
+#### `mergeData(array $additionalData): self`
+
+Creates a new successful result by merging data. Throws `LogicException` if called on a failed result.
+
+```php
+$result1 = ActionResult::success(['user_id' => 123]);
+$result2 = $result1->mergeData(['email' => 'user@example.com']);
+// result2 data: ['user_id' => 123, 'email' => 'user@example.com']
+```
+
+#### `toArray(): array`
+
+Convert the result to an array representation for serialization.
+
+```php
+$array = $result->toArray();
+// ['success' => true, 'error_message' => null, 'data' => [...], 'metadata' => [...]]
+```
 
 ## SimpleWorkflow
 
-Helper class for creating common workflow patterns.
+Helper class for simplified workflow creation and execution.
 
-### Static Methods
-
-#### `quick(): self`
-
-Creates a new simple workflow builder.
+### Constructor
 
 ```php
-$workflow = SimpleWorkflow::quick()
-    ->email('welcome', to: 'user@example.com')
-    ->delay(days: 1)
-    ->email('followup', to: 'user@example.com')
-    ->build();
+$simple = new SimpleWorkflow($storageAdapter, $eventDispatcher);
 ```
 
-#### `sequential(array $steps): self`
+### Methods
 
-Creates a workflow with sequential steps.
+#### `sequential(array $steps): string`
+
+Creates and executes a workflow with sequential steps. Returns the workflow instance ID.
 
 ```php
-$workflow = SimpleWorkflow::sequential([
+$instanceId = $simple->sequential([
     'step1' => StepOneAction::class,
     'step2' => StepTwoAction::class,
     'step3' => StepThreeAction::class
-])->build();
+]);
+```
+
+#### `runAction(string $actionClass, array $config = [], array $context = []): ActionResult`
+
+Executes a single action directly without creating a workflow.
+
+#### `executeBuilder(WorkflowBuilder $builder, array $context = []): string`
+
+Executes a workflow from a builder instance.
+
+#### `resume(string $instanceId): WorkflowInstance`
+
+Resumes a paused or pending workflow.
+
+#### `getStatus(string $instanceId): array`
+
+Gets the status of a workflow instance.
+
+#### `getEngine(): WorkflowEngine`
+
+Returns the underlying workflow engine instance.
+
+## QuickWorkflowBuilder
+
+Pre-built workflow patterns for common business scenarios. Access via `WorkflowBuilder::quick()`.
+
+### Methods
+
+#### `userOnboarding(string $name = 'user-onboarding'): WorkflowBuilder`
+
+Creates a user onboarding workflow with standard steps (welcome email, delay, profile creation, role assignment).
+
+#### `orderProcessing(string $name = 'order-processing'): WorkflowBuilder`
+
+Creates an order processing workflow (validate, charge payment, update inventory, confirmation email).
+
+#### `documentApproval(string $name = 'document-approval'): WorkflowBuilder`
+
+Creates a document approval workflow (submit, assign reviewer, review request email, review, conditional approve/reject).
+
+```php
+$workflow = WorkflowBuilder::quick()
+    ->userOnboarding('premium-onboarding')
+    ->then(SetupPremiumFeaturesAction::class)
+    ->build();
 ```
 
 ## Attributes
 
 ### @WorkflowStep
 
-Marks a method as a workflow step.
+Marks a class as a workflow step with metadata.
 
 ```php
 use SolutionForest\WorkflowEngine\Attributes\WorkflowStep;
 
-class MyAction implements WorkflowAction
+#[WorkflowStep(
+    id: 'create_profile',
+    name: 'Create User Profile',
+    description: 'Creates a new user profile in the database',
+    config: ['template' => 'basic'],
+    required: true,
+    order: 1
+)]
+class CreateUserProfileAction implements WorkflowAction
 {
-    #[WorkflowStep('my-step')]
-    public function execute(WorkflowContext $context): ActionResult
-    {
-        // Action logic
-    }
+    // ...
 }
 ```
 
 ### @Timeout
 
-Sets a timeout for an action.
+Sets a timeout for an action. Accepts `seconds`, `minutes`, and/or `hours`. Provides a calculated `totalSeconds` property.
 
 ```php
 use SolutionForest\WorkflowEngine\Attributes\Timeout;
 
+#[Timeout(seconds: 30)]
+#[Timeout(minutes: 5)]
+#[Timeout(minutes: 5, seconds: 30)] // 5 minutes 30 seconds
 class MyAction implements WorkflowAction
 {
-    #[Timeout(minutes: 5)]
-    public function execute(WorkflowContext $context): ActionResult
-    {
-        // Action logic
-    }
+    // ...
 }
 ```
 
@@ -303,29 +604,102 @@ Configures retry behavior for an action.
 ```php
 use SolutionForest\WorkflowEngine\Attributes\Retry;
 
+#[Retry(attempts: 3, backoff: 'exponential')]
+#[Retry(attempts: 5, backoff: 'exponential', delay: 1000, maxDelay: 30000)]
 class MyAction implements WorkflowAction
 {
-    #[Retry(attempts: 3, backoff: 'exponential')]
-    public function execute(WorkflowContext $context): ActionResult
-    {
-        // Action logic
-    }
+    // ...
 }
 ```
 
+Parameters:
+- `attempts` (int, default 3) - Number of retry attempts
+- `backoff` (`'linear'` | `'exponential'` | `'fixed'`) - Backoff strategy
+- `delay` (int, default 1000) - Base delay in milliseconds
+- `maxDelay` (int, default 30000) - Maximum delay cap in milliseconds
+
 ### @Condition
 
-Sets a condition for when an action should execute.
+Sets a condition for when an action should execute. This attribute is repeatable.
 
 ```php
 use SolutionForest\WorkflowEngine\Attributes\Condition;
 
-class MyAction implements WorkflowAction
+#[Condition('user.email is not null')]
+#[Condition('order.amount > 100')]
+#[Condition('user.premium = true', operator: 'or')]
+class ConditionalAction implements WorkflowAction
 {
-    #[Condition('user.age >= 18')]
-    public function execute(WorkflowContext $context): ActionResult
-    {
-        // Action logic
-    }
+    // ...
 }
 ```
+
+Parameters:
+- `expression` (string) - The condition expression
+- `operator` (`'and'` | `'or'`, default `'and'`) - How to combine with other conditions
+
+## Events
+
+The workflow engine dispatches the following events:
+
+### WorkflowStarted
+
+Dispatched when a workflow begins execution.
+
+Properties: `workflowId`, `name`, `context` (array)
+
+### WorkflowCompletedEvent
+
+Dispatched when a workflow finishes successfully.
+
+Properties: `instance` (WorkflowInstance)
+
+### WorkflowFailedEvent
+
+Dispatched when a workflow fails due to errors.
+
+Properties: `instance` (WorkflowInstance), `exception` (Throwable)
+
+### WorkflowCancelled
+
+Dispatched when a workflow is cancelled.
+
+Properties: `workflowId`, `name`, `reason` (string)
+
+### StepCompletedEvent
+
+Dispatched when a step completes successfully.
+
+Properties: `instance`, `step`, `result`
+
+### StepFailedEvent
+
+Dispatched when a step fails.
+
+Properties: `instance`, `step`, `exception` (Throwable)
+
+## Exceptions
+
+### WorkflowException (abstract base)
+
+Base exception for all workflow exceptions. Provides `getContext()`, `getUserMessage()`, `getDebugInfo()`, `getSuggestions()`.
+
+### InvalidWorkflowDefinitionException
+
+Thrown for validation errors in workflow definitions. Factory methods: `missingRequiredField()`, `invalidStep()`, `invalidStepId()`, `invalidRetryAttempts()`, `invalidTimeout()`, `duplicateStepId()`, `invalidName()`, `invalidCondition()`, `invalidDelay()`, `emptyWorkflow()`, `actionNotFound()`, `invalidActionClass()`.
+
+### WorkflowInstanceNotFoundException
+
+Thrown when a workflow instance cannot be found. Factory methods: `notFound()`, `malformedId()`, `storageConnectionError()`.
+
+### InvalidWorkflowStateException
+
+Thrown for invalid state transitions. Factory methods: `cannotResumeCompleted()`, `cannotCancelFailed()`, `alreadyRunning()`, `fromInstanceTransition()`.
+
+### ActionNotFoundException
+
+Thrown when an action class cannot be found or doesn't implement the interface. Factory methods: `classNotFound()`, `invalidInterface()`, `actionNotFound()`, `invalidActionClass()`.
+
+### StepExecutionException
+
+Thrown when a step fails during execution. Factory methods: `actionClassNotFound()`, `invalidActionClass()`, `timeout()`, `fromException()`, `actionFailed()`.
