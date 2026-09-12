@@ -2,6 +2,15 @@
 
 All notable changes to `workflow-engine-laravel` will be documented in this file.
 
+## v1.1.0 - 2026-09-12
+
+Moves to **workflow-engine-core 2.0**, a `fix!` release correcting silent-success defects. Two of those corrections are breaking for consumers of this package:
+
+- **`WorkflowBuilder::email()` is now `fakeEmail()`**, adding a `FakeEmailAction`. The rename is the point: the old method never sent anything, so a workflow that "emailed" a user silently did nothing. Anyone calling `->email()` must rename.
+- **A failed workflow can now transition back to running**, so it can be retried. Completed and cancelled remain terminal.
+
+74 tests pass against core 2.0.0; Pint clean.
+
 ## v1.0.0 - 2026-09-12
 
 First stable release.
