@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Facade;
 use SolutionForest\WorkflowEngine\Core\WorkflowEngine as CoreWorkflowEngine;
 
 /**
- * @see \SolutionForest\WorkflowEngine\Core\WorkflowEngine
+ * @see CoreWorkflowEngine
  */
 class WorkflowEngine extends Facade
 {

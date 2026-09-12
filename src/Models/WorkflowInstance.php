@@ -2,6 +2,7 @@
 
 namespace SolutionForest\WorkflowEngine\Laravel\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use SolutionForest\WorkflowEngine\Core\WorkflowDefinition;
 use SolutionForest\WorkflowEngine\Core\WorkflowInstance as CoreWorkflowInstance;
@@ -18,8 +19,8 @@ use SolutionForest\WorkflowEngine\Core\WorkflowState;
  * @property array $completed_steps
  * @property array $failed_steps
  * @property string|null $error_message
- * @property \Carbon\Carbon $created_at
- * @property \Carbon\Carbon $updated_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class WorkflowInstance extends Model
 {

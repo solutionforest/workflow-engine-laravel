@@ -16,21 +16,20 @@ class ProcessPaymentAction implements WorkflowAction
         $paymentId = 'pay_'.uniqid();
         $success = $order['total'] < 100000; // Simulate payment failure for very large orders
 
-        if ($success) {
-            $context->setData('payment.id', $paymentId);
-            $context->setData('payment.success', true);
-            $context->setData('payment.amount', $order['total']);
-        } else {
-            $context->setData('payment.success', false);
-            $context->setData('payment.error', 'Payment declined');
-        }
-
+        // WorkflowContext is immutable, so what the step produces is returned
+        // rather than written back into the context it was handed.
         return new ActionResult(
             success: $success,
             data: [
                 'payment_id' => $success ? $paymentId : null,
                 'amount' => $order['total'],
                 'status' => $success ? 'completed' : 'failed',
+                'payment' => [
+                    'id' => $success ? $paymentId : null,
+                    'success' => $success,
+                    'amount' => $success ? $order['total'] : null,
+                    'error' => $success ? null : 'Payment declined',
+                ],
             ],
             errorMessage: $success ? null : 'Payment processing failed'
         );

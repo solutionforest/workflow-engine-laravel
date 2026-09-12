@@ -2,6 +2,7 @@
 
 use SolutionForest\WorkflowEngine\Core\WorkflowBuilder;
 use SolutionForest\WorkflowEngine\Core\WorkflowEngine;
+use SolutionForest\WorkflowEngine\Exceptions\InvalidWorkflowDefinitionException;
 use SolutionForest\WorkflowEngine\Laravel\Tests\Support\TestActions\CreateUserProfileAction;
 use SolutionForest\WorkflowEngine\Laravel\Tests\Support\TestActions\RiskyAction;
 use SolutionForest\WorkflowEngine\Laravel\Tests\Support\TestActions\SendWelcomeEmailAction;
@@ -24,7 +25,7 @@ describe('Advanced Features Tests', function () {
             ->build();
 
         $steps = $workflow->getSteps();
-        $step = $steps['email_0'];
+        $step = $steps['email_1'];
         expect($step->getConfig())->toBe([
             'template' => 'welcome-email',
             'to' => '{{ user.email }}',
@@ -43,9 +44,9 @@ describe('Advanced Features Tests', function () {
         expect($workflow->getSteps())->toHaveCount(3);
 
         $steps = $workflow->getSteps();
-        expect($steps['delay_0']->getConfig()['seconds'])->toBe(30);
-        expect($steps['delay_1']->getConfig()['seconds'])->toBe(300);
-        expect($steps['delay_2']->getConfig()['seconds'])->toBe(5400); // 1.5 hours
+        expect($steps['delay_1']->getConfig()['seconds'])->toBe(30);
+        expect($steps['delay_2']->getConfig()['seconds'])->toBe(300);
+        expect($steps['delay_3']->getConfig()['seconds'])->toBe(5400); // 1.5 hours
     });
 
     test('http action supports all documented parameters', function () {
@@ -204,21 +205,21 @@ describe('Advanced Features Tests', function () {
     test('workflow validation catches invalid configurations', function () {
         expect(function () {
             WorkflowBuilder::create(''); // Empty name should fail
-        })->toThrow(\SolutionForest\WorkflowEngine\Exceptions\InvalidWorkflowDefinitionException::class);
+        })->toThrow(InvalidWorkflowDefinitionException::class);
 
         expect(function () {
             WorkflowBuilder::create('123invalid'); // Invalid name format
-        })->toThrow(\SolutionForest\WorkflowEngine\Exceptions\InvalidWorkflowDefinitionException::class);
+        })->toThrow(InvalidWorkflowDefinitionException::class);
 
         expect(function () {
             WorkflowBuilder::create('valid-name')
                 ->delay(); // No delay specified should fail
-        })->toThrow(\SolutionForest\WorkflowEngine\Exceptions\InvalidWorkflowDefinitionException::class);
+        })->toThrow(InvalidWorkflowDefinitionException::class);
 
         expect(function () {
             WorkflowBuilder::create('valid-name')
                 ->when('', function ($builder) {}); // Empty condition should fail
-        })->toThrow(\SolutionForest\WorkflowEngine\Exceptions\InvalidWorkflowDefinitionException::class);
+        })->toThrow(InvalidWorkflowDefinitionException::class);
     });
 
 });
