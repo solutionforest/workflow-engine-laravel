@@ -19,9 +19,9 @@ describe('Documentation Examples', function () {
     test('getting started - basic workflow creation works', function () {
         $registrationWorkflow = WorkflowBuilder::create('user-registration')
             ->addStep('create-profile', CreateUserProfileAction::class)
-            ->email('welcome-email', '{{ user.email }}', 'Welcome!')
+            ->fakeEmail('welcome-email', '{{ user.email }}', 'Welcome!')
             ->delay(hours: 24)
-            ->email('tips-email', '{{ user.email }}', 'Getting Started Tips')
+            ->fakeEmail('tips-email', '{{ user.email }}', 'Getting Started Tips')
             ->build();
 
         expect($registrationWorkflow)->not->toBeNull();
@@ -129,14 +129,14 @@ describe('Documentation Examples', function () {
 
     test('api reference - email method works', function () {
         $workflow = WorkflowBuilder::create('email-workflow')
-            ->email('welcome-email', '{{ user.email }}', 'Welcome {{ user.name }}!', ['welcome_bonus' => 100])
+            ->fakeEmail('welcome-email', '{{ user.email }}', 'Welcome {{ user.name }}!', ['welcome_bonus' => 100])
             ->build();
 
         expect($workflow->getSteps())->toHaveCount(1);
 
         $steps = $workflow->getSteps();
         $step = $steps['email_1'];
-        expect($step->getActionClass())->toBe('SolutionForest\\WorkflowEngine\\Actions\\EmailAction');
+        expect($step->getActionClass())->toBe('SolutionForest\\WorkflowEngine\\Actions\\FakeEmailAction');
         expect($step->getConfig()['template'])->toBe('welcome-email');
         expect($step->getConfig()['to'])->toBe('{{ user.email }}');
         expect($step->getConfig()['subject'])->toBe('Welcome {{ user.name }}!');
@@ -235,7 +235,7 @@ describe('Documentation Examples', function () {
             ->description('A complex workflow showcasing all features')
             ->version('2.0')
             ->startWith(CreateUserProfileAction::class, ['profile_type' => 'premium'])
-            ->email('welcome-email', '{{ user.email }}', 'Welcome to Premium!')
+            ->fakeEmail('welcome-email', '{{ user.email }}', 'Welcome to Premium!')
             ->when('user.age >= 21', function ($builder) {
                 $builder->addStep('age-verification', VerifyIdentityAction::class, [], '60s', 2);
             })
@@ -258,7 +258,7 @@ describe('Documentation Examples', function () {
             ->description('A complex workflow showcasing all features')
             ->version('2.0')
             ->startWith(CreateUserProfileAction::class, ['profile_type' => 'premium'])
-            ->email('welcome-email', '{{ user.email }}', 'Welcome to Premium!')
+            ->fakeEmail('welcome-email', '{{ user.email }}', 'Welcome to Premium!')
             ->when('user.age >= 21', function ($builder) {
                 $builder->addStep('age-verification', VerifyIdentityAction::class, [], '60s', 2);
             })
