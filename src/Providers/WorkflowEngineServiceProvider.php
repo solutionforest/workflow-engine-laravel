@@ -2,10 +2,16 @@
 
 namespace SolutionForest\WorkflowEngine\Laravel\Providers;
 
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Log\LogManager;
 use Illuminate\Support\ServiceProvider;
+use SolutionForest\WorkflowEngine\Contracts\EventDispatcher;
+use SolutionForest\WorkflowEngine\Contracts\Logger;
 use SolutionForest\WorkflowEngine\Contracts\StorageAdapter;
 use SolutionForest\WorkflowEngine\Core\WorkflowEngine;
+use SolutionForest\WorkflowEngine\Laravel\Adapters\LaravelEventDispatcher;
+use SolutionForest\WorkflowEngine\Laravel\Adapters\LaravelLogger;
 use SolutionForest\WorkflowEngine\Laravel\Commands\LaravelWorkflowEngineCommand;
 use SolutionForest\WorkflowEngine\Laravel\Storage\DatabaseStorage;
 
@@ -33,16 +39,16 @@ class WorkflowEngineServiceProvider extends ServiceProvider
         });
 
         // Register event dispatcher adapter
-        $this->app->singleton(\SolutionForest\WorkflowEngine\Contracts\EventDispatcher::class, function ($app) {
-            return new \SolutionForest\WorkflowEngine\Laravel\Adapters\LaravelEventDispatcher(
-                $app->make(\Illuminate\Contracts\Events\Dispatcher::class)
+        $this->app->singleton(EventDispatcher::class, function ($app) {
+            return new LaravelEventDispatcher(
+                $app->make(Dispatcher::class)
             );
         });
 
         // Register logger adapter
-        $this->app->singleton(\SolutionForest\WorkflowEngine\Contracts\Logger::class, function ($app) {
-            return new \SolutionForest\WorkflowEngine\Laravel\Adapters\LaravelLogger(
-                $app->make(\Illuminate\Log\LogManager::class)
+        $this->app->singleton(Logger::class, function ($app) {
+            return new LaravelLogger(
+                $app->make(LogManager::class)
             );
         });
 
@@ -50,7 +56,7 @@ class WorkflowEngineServiceProvider extends ServiceProvider
         $this->app->singleton(WorkflowEngine::class, function ($app): WorkflowEngine {
             return new WorkflowEngine(
                 $app->make(StorageAdapter::class),
-                $app->make(\SolutionForest\WorkflowEngine\Contracts\EventDispatcher::class)
+                $app->make(EventDispatcher::class)
             );
         });
 

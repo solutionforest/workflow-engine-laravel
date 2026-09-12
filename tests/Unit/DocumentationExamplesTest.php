@@ -1,6 +1,7 @@
 <?php
 
 use SolutionForest\WorkflowEngine\Core\WorkflowBuilder;
+use SolutionForest\WorkflowEngine\Core\WorkflowContext;
 use SolutionForest\WorkflowEngine\Core\WorkflowEngine;
 use SolutionForest\WorkflowEngine\Core\WorkflowState;
 use SolutionForest\WorkflowEngine\Laravel\Tests\Actions\ECommerce\ProcessPaymentAction;
@@ -50,7 +51,7 @@ describe('Documentation Examples', function () {
 
         // Direct test of the getData method
         $contextClass = get_class($context);
-        expect($contextClass)->toBe(\SolutionForest\WorkflowEngine\Core\WorkflowContext::class);
+        expect($contextClass)->toBe(WorkflowContext::class);
 
         // Test the getData method implementation directly
         $allData = $context->getData();
@@ -134,7 +135,7 @@ describe('Documentation Examples', function () {
         expect($workflow->getSteps())->toHaveCount(1);
 
         $steps = $workflow->getSteps();
-        $step = $steps['email_0'];
+        $step = $steps['email_1'];
         expect($step->getActionClass())->toBe('SolutionForest\\WorkflowEngine\\Actions\\EmailAction');
         expect($step->getConfig()['template'])->toBe('welcome-email');
         expect($step->getConfig()['to'])->toBe('{{ user.email }}');
@@ -153,7 +154,7 @@ describe('Documentation Examples', function () {
         expect($workflow->getSteps())->toHaveCount(1);
 
         $steps = $workflow->getSteps();
-        $step = $steps['http_0'];
+        $step = $steps['http_1'];
         expect($step->getActionClass())->toBe('SolutionForest\\WorkflowEngine\\Actions\\HttpAction');
         expect($step->getConfig()['url'])->toBe('https://api.example.com/webhooks');
         expect($step->getConfig()['method'])->toBe('POST');
@@ -175,13 +176,13 @@ describe('Documentation Examples', function () {
         $steps = $workflow->getSteps();
 
         // 30 minutes = 1800 seconds
-        expect($steps['delay_0']->getConfig()['seconds'])->toBe(1800);
+        expect($steps['delay_1']->getConfig()['seconds'])->toBe(1800);
 
         // 2 hours = 7200 seconds
-        expect($steps['delay_1']->getConfig()['seconds'])->toBe(7200);
+        expect($steps['delay_2']->getConfig()['seconds'])->toBe(7200);
 
         // 24 hours = 86400 seconds
-        expect($steps['delay_2']->getConfig()['seconds'])->toBe(86400);
+        expect($steps['delay_3']->getConfig()['seconds'])->toBe(86400);
     });
 
     test('api reference - when conditional method works', function () {
@@ -245,16 +246,38 @@ describe('Documentation Examples', function () {
 
         expect($workflow->getName())->toBe('complex-workflow');
         expect($workflow->getSteps())->toHaveCount(6); // startWith + email + conditional + delay + http + then
+    });
 
-        // Test execution
-        $definition = $workflow->toArray();
-        $workflowId = $this->engine->start('complex-workflow', $definition, [
+    test('a workflow combining multiple features executes', function () {
+        // The http step is deliberately absent here. HttpAction issues a real
+        // curl request, so executing one in a unit test reaches the network:
+        // it made this suite depend on DNS and took five minutes to fail when
+        // the host could not be resolved. The builder assertions above still
+        // cover the http step; this covers execution.
+        $workflow = WorkflowBuilder::create('complex-workflow')
+            ->description('A complex workflow showcasing all features')
+            ->version('2.0')
+            ->startWith(CreateUserProfileAction::class, ['profile_type' => 'premium'])
+            ->email('welcome-email', '{{ user.email }}', 'Welcome to Premium!')
+            ->when('user.age >= 21', function ($builder) {
+                $builder->addStep('age-verification', VerifyIdentityAction::class, [], '60s', 2);
+            })
+            // One second, not the five minutes the builder example uses:
+            // DelayAction sleeps for real, so executing that example made this
+            // single test take five minutes of wall clock.
+            ->delay(seconds: 1)
+            ->then(ProcessPaymentAction::class, ['amount' => 99.99], '120s', 3)
+            ->build();
+
+        $workflowId = $this->engine->start('complex-workflow', $workflow->toArray(), [
             'user' => ['id' => 1, 'email' => 'test@example.com', 'age' => 25],
+            // The payment step needs an order. The original test never reached
+            // it, because the http step before it failed on DNS first.
+            'order' => ['id' => 1, 'total' => 9999],
         ]);
 
-        expect($workflowId)->not->toBeEmpty();
-        $instance = $this->engine->getInstance($workflowId);
-        expect($instance)->not->toBeNull();
+        expect($workflowId)->not->toBeEmpty()
+            ->and($this->engine->getInstance($workflowId))->not->toBeNull();
     });
 
 });
