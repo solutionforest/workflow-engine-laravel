@@ -2,6 +2,24 @@
 
 All notable changes to `workflow-engine-laravel` will be documented in this file.
 
+## v1.0.0 - 2026-09-12
+
+First stable release.
+
+- Laravel 13 support (`illuminate/*` now `^10|^11|^12|^13`).
+- Depends on `solution-forest/workflow-engine-core: ^1.0` instead of `dev-main || ^0.0.3-alpha`. A stable release cannot require an alpha, and `dev-main` in a release means consumers get whatever `main` happens to be that day.
+- `minimum-stability` is now `stable`.
+
+**The test suite had never run against core 0.0.4+**, and three things had drifted:
+
+- Auto-generated step ids became 1-based in core, so assertions on `email_0` / `http_0` / `delay_0` were off by one. Two tests also asserted the same key twice while claiming to check three different steps, which hid it.
+- `WorkflowContext` is immutable now and `setData()` is gone; a fixture still mutated the context it was handed.
+- One test made a real HTTP request to `api.example.com` and a real five-minute delay — it spent 300 seconds sleeping, then failed on DNS, and never reached the payment assertions that were also broken.
+
+**Suite time: 304s → 4.6s**, 74 tests passing.
+
+> Note: `workflow-engine-core` v1.0.0 is not yet on Packagist — the repository has no Packagist webhook configured. Until it is published, consumers need a VCS repository entry for the core package.
+
 ## v0.0.6-alpha - 2026-02-19
 
 **Full Changelog**: https://github.com/solutionforest/workflow-engine-laravel/compare/v0.0.5-alpha...v0.0.6-alpha
