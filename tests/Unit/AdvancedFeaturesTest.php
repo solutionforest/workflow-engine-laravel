@@ -16,7 +16,7 @@ describe('Advanced Features Tests', function () {
 
     test('email action configuration matches documentation examples', function () {
         $workflow = WorkflowBuilder::create('email-test')
-            ->email(
+            ->fakeEmail(
                 'welcome-email',
                 '{{ user.email }}',
                 'Welcome to {{ app.name }}!',
@@ -101,7 +101,7 @@ describe('Advanced Features Tests', function () {
             ->version('1.5')
             ->startWith(CreateUserProfileAction::class, ['profile_type' => 'basic'])
             ->then(SendWelcomeEmailAction::class)
-            ->email('tips-email', '{{ user.email }}', 'Getting Started Tips')
+            ->fakeEmail('tips-email', '{{ user.email }}', 'Getting Started Tips')
             ->delay(minutes: 5)
             ->when('user.premium = true', function ($builder) {
                 $builder->then(VerifyIdentityAction::class);
@@ -116,7 +116,7 @@ describe('Advanced Features Tests', function () {
         $stepClasses = array_map(fn ($step) => $step->getActionClass(), $workflow->getSteps());
         expect($stepClasses)->toContain(CreateUserProfileAction::class);
         expect($stepClasses)->toContain(SendWelcomeEmailAction::class);
-        expect($stepClasses)->toContain('SolutionForest\\WorkflowEngine\\Actions\\EmailAction');
+        expect($stepClasses)->toContain('SolutionForest\\WorkflowEngine\\Actions\\FakeEmailAction');
         expect($stepClasses)->toContain('SolutionForest\\WorkflowEngine\\Actions\\DelayAction');
         expect($stepClasses)->toContain(VerifyIdentityAction::class);
         expect($stepClasses)->toContain('SolutionForest\\WorkflowEngine\\Actions\\HttpAction');
@@ -149,7 +149,7 @@ describe('Advanced Features Tests', function () {
     test('complex workflow execution with all features', function () {
         $workflow = WorkflowBuilder::create('integration-test')
             ->startWith(CreateUserProfileAction::class, ['profile_type' => 'premium'])
-            ->email('welcome-email', '{{ user.email }}', 'Welcome Premium User!')
+            ->fakeEmail('welcome-email', '{{ user.email }}', 'Welcome Premium User!')
             ->delay(seconds: 1) // Short delay for testing
             ->when('user.age >= 21', function ($builder) {
                 $builder->addStep('age_verification', VerifyIdentityAction::class, [], '30s', 2);
