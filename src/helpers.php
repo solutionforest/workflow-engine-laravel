@@ -18,6 +18,9 @@ if (! function_exists('workflow')) {
 if (! function_exists('start_workflow')) {
     /**
      * Start a new workflow.
+     *
+     * @param  array<string, mixed>  $definition
+     * @param  array<string, mixed>  $context
      */
     function start_workflow(string $id, array $definition, array $context = []): string
     {
@@ -45,9 +48,24 @@ if (! function_exists('cancel_workflow')) {
     }
 }
 
+if (! function_exists('signal_workflow')) {
+    /**
+     * Deliver a signal to a suspended workflow (see WorkflowEngine::signal()).
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    function signal_workflow(string $id, string $signal, array $payload = []): WorkflowInstance
+    {
+        return workflow()->signal($id, $signal, $payload);
+    }
+}
+
 if (! function_exists('list_workflows')) {
     /**
      * List workflows.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return array<WorkflowInstance>
      */
     function list_workflows(array $filters = []): array
     {

@@ -1,24 +1,39 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SolutionForest\WorkflowEngine\Laravel\Models;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
-use SolutionForest\WorkflowEngine\Core\WorkflowDefinition;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
+use SolutionForest\WorkflowEngine\Contracts\StorageAdapter;
 use SolutionForest\WorkflowEngine\Core\WorkflowInstance as CoreWorkflowInstance;
 use SolutionForest\WorkflowEngine\Core\WorkflowState;
 
 /**
+ * Read model of the `workflow_instances` table, for queries, admin screens and relations
+ * (`$model->workflows()` via `subject`). Writes go through the engine and DatabaseStorage,
+ * which check the revision; do not save this model.
+ *
  * @property string $id
+ * @property string|null $tenant_id
+ * @property string|null $subject_type
+ * @property string|null $subject_id
  * @property string $definition_name
  * @property string $definition_version
- * @property array $definition_data
+ * @property string|null $definition_fingerprint
+ * @property array<string, mixed> $definition_data
  * @property WorkflowState $state
- * @property array $data
+ * @property array<string, mixed>|null $data
  * @property string|null $current_step_id
- * @property array $completed_steps
- * @property array $failed_steps
+ * @property list<string>|null $completed_steps
+ * @property array<int, array<string, string>>|null $failed_steps
  * @property string|null $error_message
+ * @property array<string, mixed>|null $wait_state
+ * @property string|null $waits_for
+ * @property Carbon|null $resume_at
+ * @property int $revision
  * @property Carbon $created_at
  * @property Carbon $updated_at
  */
@@ -26,69 +41,47 @@ class WorkflowInstance extends Model
 {
     protected $table = 'workflow_instances';
 
-    protected $fillable = [
-        'id',
-        'definition_name',
-        'definition_version',
-        'definition_data',
-        'state',
-        'data',
-        'current_step_id',
-        'completed_steps',
-        'failed_steps',
-        'error_message',
-    ];
-
-    protected $casts = [
-        'definition_data' => 'array',
-        'data' => 'array',
-        'completed_steps' => 'array',
-        'failed_steps' => 'array',
-        'state' => WorkflowState::class,
-    ];
+    protected $guarded = ['*'];
 
     public $incrementing = false;
 
     protected $keyType = 'string';
 
-    /**
-     * Convert this Eloquent model to a core WorkflowInstance
-     */
-    public function toCoreInstance(): CoreWorkflowInstance
+    /** @return array<string, string|class-string> */
+    protected function casts(): array
     {
-        $definition = WorkflowDefinition::fromArray($this->definition_data);
+        return [
+            'definition_data' => 'array',
+            'data' => 'array',
+            'completed_steps' => 'array',
+            'failed_steps' => 'array',
+            'wait_state' => 'array',
+            'state' => WorkflowState::class,
+            'resume_at' => 'datetime',
+            'revision' => 'integer',
+        ];
+    }
 
-        return CoreWorkflowInstance::fromArray([
-            'id' => $this->id,
-            'state' => $this->state->value,
-            'data' => $this->data,
-            'current_step_id' => $this->current_step_id,
-            'completed_steps' => $this->completed_steps,
-            'failed_steps' => $this->failed_steps,
-            'error_message' => $this->error_message,
-            'created_at' => $this->created_at->toISOString(),
-            'updated_at' => $this->updated_at->toISOString(),
-        ], $definition);
+    public function getTable(): string
+    {
+        $table = config('workflow-engine.storage.database.table');
+
+        return is_string($table) && $table !== '' ? $table : 'workflow_instances';
     }
 
     /**
-     * Create an Eloquent model from a core WorkflowInstance
+     * The record this workflow runs for (`_meta.subject_type` / `subject_id` at start).
+     *
+     * @return MorphTo<Model, $this>
      */
-    public static function fromCoreInstance(CoreWorkflowInstance $instance): self
+    public function subject(): MorphTo
     {
-        return new self([
-            'id' => $instance->getId(),
-            'definition_name' => $instance->getDefinition()->getName(),
-            'definition_version' => $instance->getDefinition()->getVersion(),
-            'definition_data' => $instance->getDefinition()->toArray(),
-            'state' => $instance->getState(),
-            'data' => $instance->getData(),
-            'current_step_id' => $instance->getCurrentStepId(),
-            'completed_steps' => $instance->getCompletedSteps(),
-            'failed_steps' => $instance->getFailedSteps(),
-            'error_message' => $instance->getErrorMessage(),
-            'created_at' => $instance->getCreatedAt(),
-            'updated_at' => $instance->getUpdatedAt(),
-        ]);
+        return $this->morphTo();
+    }
+
+    /** The engine's instance, loaded through storage (revision included). */
+    public function toCoreInstance(): CoreWorkflowInstance
+    {
+        return app(StorageAdapter::class)->load($this->id);
     }
 }

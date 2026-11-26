@@ -2,6 +2,19 @@
 
 All notable changes to `workflow-engine-laravel` will be documented in this file.
 
+## v2.0.0 - 2026-11-26
+
+Moves to **workflow-engine-core 3.0**: workflows can wait for people and time without holding a process. Breaking; see [UPGRADE.md](UPGRADE.md).
+
+- `DatabaseStorage` saves are compare-and-swap on a new `revision` column (`ConcurrentModificationException` on a conflict), store what a suspended workflow waits for (`wait_state`, `waits_for`, `resume_at`), the definition fingerprint, and optional owner columns (`tenant_id`, `subject_type`, `subject_id`) from `_meta` in the workflow data. It honours `workflow-engine.storage.database.connection`, and `load()` of a missing id throws `WorkflowInstanceNotFoundException`.
+- New `workflow:resume-due` command, scheduled every minute (`workflow-engine.schedule.resume_due`).
+- New queue jobs `StartWorkflow` and `SignalWorkflow` (retries conflicts with back-off), and `signal_workflow()` helper.
+- The engine gets the Laravel logger, and SIGALRM timeouts only with `workflow-engine.actions.signal_timeouts`.
+- New upgrade migration stub (`vendor:publish --tag=workflow-engine-upgrade-migrations`).
+- The `Models\WorkflowInstance` read model gains the new columns and a `subject()` relation; it is read-only (writes go through storage).
+- Removed the placeholder `workflow-engine` command and the unused `file` storage settings.
+- PHPStan level 9 (was 5). Tests run against the shipped migration.
+
 ## v1.1.0 - 2026-09-12
 
 Moves to **workflow-engine-core 2.0**, a `fix!` release correcting silent-success defects. Two of those corrections are breaking for consumers of this package:

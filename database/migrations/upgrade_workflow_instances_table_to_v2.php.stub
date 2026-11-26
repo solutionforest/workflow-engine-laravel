@@ -1,0 +1,38 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+
+/** Adds the v2 columns (waits, optimistic locking, owner) to a table created by v1. */
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('workflow_instances', function (Blueprint $table) {
+            $table->string('tenant_id')->nullable()->index();
+            $table->string('subject_type')->nullable();
+            $table->string('subject_id')->nullable();
+            $table->string('definition_fingerprint', 64)->nullable();
+            $table->json('wait_state')->nullable();
+            $table->string('waits_for')->nullable();
+            $table->timestamp('resume_at')->nullable();
+            $table->unsignedInteger('revision')->default(0);
+            $table->index(['subject_type', 'subject_id']);
+            $table->index(['state', 'resume_at']);
+        });
+
+        // Revision 0 means "never saved"; rows that exist were saved at least once.
+        DB::table('workflow_instances')->update(['revision' => 1]);
+    }
+
+    public function down(): void
+    {
+        Schema::table('workflow_instances', function (Blueprint $table) {
+            $table->dropIndex(['subject_type', 'subject_id']);
+            $table->dropIndex(['state', 'resume_at']);
+            $table->dropColumn(['tenant_id', 'subject_type', 'subject_id', 'definition_fingerprint', 'wait_state', 'waits_for', 'resume_at', 'revision']);
+        });
+    }
+};
