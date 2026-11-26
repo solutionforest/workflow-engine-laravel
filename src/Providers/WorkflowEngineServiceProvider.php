@@ -2,6 +2,7 @@
 
 namespace SolutionForest\WorkflowEngine\Laravel\Providers;
 
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Log\LogManager;
@@ -12,7 +13,7 @@ use SolutionForest\WorkflowEngine\Contracts\StorageAdapter;
 use SolutionForest\WorkflowEngine\Core\WorkflowEngine;
 use SolutionForest\WorkflowEngine\Laravel\Adapters\LaravelEventDispatcher;
 use SolutionForest\WorkflowEngine\Laravel\Adapters\LaravelLogger;
-use SolutionForest\WorkflowEngine\Laravel\Commands\LaravelWorkflowEngineCommand;
+use SolutionForest\WorkflowEngine\Laravel\Commands\ResumeDueWorkflowsCommand;
 use SolutionForest\WorkflowEngine\Laravel\Storage\DatabaseStorage;
 
 class WorkflowEngineServiceProvider extends ServiceProvider
@@ -32,9 +33,10 @@ class WorkflowEngineServiceProvider extends ServiceProvider
             return match ($driver) {
                 'database' => new DatabaseStorage(
                     $app->make(DatabaseManager::class),
-                    config('workflow-engine.storage.database.table', 'workflow_instances')
+                    self::string('workflow-engine.storage.database.table') ?? 'workflow_instances',
+                    self::string('workflow-engine.storage.database.connection'),
                 ),
-                default => throw new \InvalidArgumentException("Unsupported storage driver: {$driver}")
+                default => throw new \InvalidArgumentException('Unsupported storage driver: '.(is_string($driver) ? $driver : get_debug_type($driver)))
             };
         });
 
@@ -56,7 +58,10 @@ class WorkflowEngineServiceProvider extends ServiceProvider
         $this->app->singleton(WorkflowEngine::class, function ($app): WorkflowEngine {
             return new WorkflowEngine(
                 $app->make(StorageAdapter::class),
-                $app->make(EventDispatcher::class)
+                $app->make(EventDispatcher::class),
+                $app->make(Logger::class),
+                // SIGALRM timeouts only in a CLI worker that runs one workflow at a time.
+                config('workflow-engine.actions.signal_timeouts') === true,
             );
         });
 
@@ -79,6 +84,9 @@ class WorkflowEngineServiceProvider extends ServiceProvider
             $this->publishes([
                 __DIR__.'/../../database/migrations/create_workflow_instances_table.php.stub' => database_path('migrations/'.date('Y_m_d_His', time()).'_create_workflow_instances_table.php'),
             ], 'workflow-engine-migrations');
+            $this->publishes([
+                __DIR__.'/../../database/migrations/upgrade_workflow_instances_table_to_v2.php.stub' => database_path('migrations/'.date('Y_m_d_His', time()).'_upgrade_workflow_instances_table_to_v2.php'),
+            ], 'workflow-engine-upgrade-migrations');
         }
 
         // Publish views
@@ -91,8 +99,21 @@ class WorkflowEngineServiceProvider extends ServiceProvider
         // Register commands
         if ($this->app->runningInConsole()) {
             $this->commands([
-                LaravelWorkflowEngineCommand::class,
+                ResumeDueWorkflowsCommand::class,
             ]);
         }
+
+        if (config('workflow-engine.schedule.resume_due', true) !== false) {
+            $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
+                $schedule->command('workflow:resume-due')->everyMinute()->withoutOverlapping()->onOneServer();
+            });
+        }
+    }
+
+    private static function string(string $key): ?string
+    {
+        $value = config($key);
+
+        return is_string($value) && $value !== '' ? $value : null;
     }
 }

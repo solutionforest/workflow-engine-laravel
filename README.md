@@ -8,13 +8,6 @@
 
 Create powerful business workflows with simple, maintainable code.
 
-> ⚠️ **WARNING: DEVELOPMENT STATUS**⚠️ 
-> 
-> This package is currently under active development and is **NOT READY FOR PRODUCTION USE**. 
-> 
-> Features may be incomplete, APIs might change, and there could be breaking changes. Use at your own risk in development environments only.
-
-
 ## ✨ Why Choose This Workflow Engine?
 
 - 🎨 **Simple & Intuitive** - Array-based workflow definitions and fluent WorkflowBuilder API
@@ -412,7 +405,7 @@ start_workflow('notification-001', $definition, [
     ]
 ]
 
-// Delay Action - Built-in delays (for testing/demo)
+// Delay Action - suspends the workflow; workflow:resume-due continues it once the time has passed
 [
     'id' => 'delay-step', 
     'action' => 'delay',
@@ -441,6 +434,47 @@ $runningWorkflows = list_workflows(['state' => WorkflowState::RUNNING]);
 // Cancel a workflow
 cancel_workflow($workflowId, 'User requested cancellation');
 ```
+
+### Waiting for people and time (v2)
+
+A step can wait for hours or days without holding a process: it returns
+`ActionResult::suspend()`, and the instance stays `waiting` in the database until
+something resumes it.
+
+```php
+use SolutionForest\WorkflowEngine\Core\ActionResult;
+
+class RequestApprovalAction extends BaseAction
+{
+    protected function doExecute(WorkflowContext $context): ActionResult
+    {
+        // notify the approvers here, then wait for "decided" for at most three days
+        return ActionResult::suspend('decided', now()->addDays(3));
+    }
+}
+
+// Later, when someone decides (a controller, a listener):
+workflow()->signal($instanceId, 'decided', ['decision' => 'approved', 'by' => $user->id]);
+// or on the queue, so the next steps run in a worker:
+SignalWorkflow::dispatch($instanceId, 'decided', ['decision' => 'approved']);
+```
+
+- The payload is kept under `steps.<step id>.payload`, so a transition can branch on it:
+  `'condition' => 'steps.approve.payload.decision === "approved"'`.
+- When the time passes first, `workflow:resume-due` resumes the step with `resumed_by = timer`.
+  The service provider schedules it every minute (`workflow-engine.schedule.resume_due`); your
+  app only needs the Laravel scheduler running. `DelayAction` (`->delay(hours: 24)`) works the same way.
+- Every save checks a `revision` column. If two workers or two approvers act on the same instance at
+  once, one of them gets `ConcurrentModificationException` and nothing of its change is written;
+  `SignalWorkflow` retries it automatically.
+- Put `_meta => ['tenant_id' => …, 'subject_type' => …, 'subject_id' => …]` in the start context to
+  find the workflow of a record: `$storage->findInstances(['subject_type' => 'order', 'subject_id' => 42])`,
+  or the read model `Models\WorkflowInstance` with its `subject()` relation.
+- `StartWorkflow::dispatch($id, $definition, $context)` starts a workflow on the queue (safe to retry).
+- Step timeouts are enforced by the queue job timeout (`workflow-engine.queue.timeout`). SIGALRM
+  timeouts are off unless `WORKFLOW_SIGNAL_TIMEOUTS=true`, which is only safe in a CLI worker.
+
+Upgrading from v1: see [UPGRADE.md](UPGRADE.md).
 
 ### Helper Functions
 
